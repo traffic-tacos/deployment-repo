@@ -1,0 +1,12 @@
+apiVersion: k6.io/v1alpha1
+kind: TestRun
+metadata:
+  name: rush-30k
+spec:
+  parallelism: 10  # 10 워커 -> 각 워커 3k RPS -> 총 30k
+  cleanup: post
+  arguments: ["-e", "RPS_TOTAL=30000", "-e", "WORKERS=10", "-e", "TARGET_URL=https://xxxxxxx"]
+  script:
+    configMap:
+      name: k6-test
+      file: script.js
