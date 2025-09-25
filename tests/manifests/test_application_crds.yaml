@@ -1,0 +1,233 @@
+# ArgoCD Application CRD Validation Test
+# This test validates ArgoCD application manifests against CRD schema
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: application-crd-test
+  namespace: argocd-test
+  labels:
+    test.traffic-tacos.com/type: crd-validation
+    test.traffic-tacos.com/component: applications
+data:
+  test-script.sh: |
+    #!/bin/bash
+    set -e
+
+    echo "=== ArgoCD Application CRD Validation Test ==="
+
+    # Test 1: Validate Application manifest syntax
+    echo "1. Validating Application YAML syntax..."
+
+    for app_file in applications/gateway/*.yaml applications/tacos/*.yaml; do
+      if [[ -f "$app_file" ]]; then
+        echo "  Validating $app_file..."
+        yq eval '.' "$app_file" > /dev/null
+        echo "  ✅ $app_file syntax valid"
+      fi
+    done
+
+    # Test 2: Validate Application spec fields
+    echo "2. Validating Application specifications..."
+
+    validate_application() {
+      local file=$1
+      local name=$(yq eval '.metadata.name' "$file")
+
+      echo "  Validating application: $name"
+
+      # Check required fields
+      local project=$(yq eval '.spec.project' "$file")
+      local source_repo=$(yq eval '.spec.source.repoURL' "$file")
+      local dest_server=$(yq eval '.spec.destination.server' "$file")
+      local dest_namespace=$(yq eval '.spec.destination.namespace' "$file")
+
+      if [[ "$project" == "null" ]]; then
+        echo "  ❌ Missing project field in $name"
+        return 1
+      fi
+
+      if [[ "$source_repo" == "null" ]]; then
+        echo "  ❌ Missing source.repoURL in $name"
+        return 1
+      fi
+
+      if [[ "$dest_server" == "null" ]]; then
+        echo "  ❌ Missing destination.server in $name"
+        return 1
+      fi
+
+      if [[ "$dest_namespace" == "null" ]]; then
+        echo "  ❌ Missing destination.namespace in $name"
+        return 1
+      fi
+
+      # Validate project reference
+      if [[ "$project" != "traffic-tacos" ]]; then
+        echo "  ❌ Invalid project '$project' in $name (expected: traffic-tacos)"
+        return 1
+      fi
+
+      # Validate repository URL format
+      if [[ ! "$source_repo" =~ ^https://github\.com/traffic-tacos/ ]]; then
+        echo "  ❌ Invalid repository URL in $name: $source_repo"
+        return 1
+      fi
+
+      # Validate destination namespace
+      if [[ "$dest_namespace" != "gateway" ]] && [[ "$dest_namespace" != "tacos" ]]; then
+        echo "  ❌ Invalid destination namespace in $name: $dest_namespace"
+        return 1
+      fi
+
+      echo "  ✅ $name application valid"
+      return 0
+    }
+
+    # Validate each application
+    for app_file in applications/gateway/*.yaml applications/tacos/*.yaml; do
+      if [[ -f "$app_file" ]]; then
+        validate_application "$app_file"
+      fi
+    done
+
+    # Test 3: Validate sync policies
+    echo "3. Validating sync policies..."
+
+    for app_file in applications/gateway/*.yaml applications/tacos/*.yaml; do
+      if [[ -f "$app_file" ]]; then
+        local name=$(yq eval '.metadata.name' "$app_file")
+        local prune=$(yq eval '.spec.syncPolicy.automated.prune' "$app_file")
+        local selfHeal=$(yq eval '.spec.syncPolicy.automated.selfHeal' "$app_file")
+
+        if [[ "$prune" != "true" ]]; then
+          echo "  ⚠️  Warning: $name does not have prune enabled"
+        fi
+
+        if [[ "$selfHeal" != "true" ]]; then
+          echo "  ⚠️  Warning: $name does not have selfHeal enabled"
+        fi
+
+        echo "  ✅ $name sync policy validated"
+      fi
+    done
+
+    # Test 4: Validate labels and annotations
+    echo "4. Validating metadata..."
+
+    for app_file in applications/gateway/*.yaml applications/tacos/*.yaml; do
+      if [[ -f "$app_file" ]]; then
+        local name=$(yq eval '.metadata.name' "$app_file")
+        local part_of=$(yq eval '.metadata.labels."app.kubernetes.io/part-of"' "$app_file")
+        local managed_by=$(yq eval '.metadata.labels."app.kubernetes.io/managed-by"' "$app_file")
+
+        if [[ "$part_of" != "traffic-tacos" ]]; then
+          echo "  ❌ Missing or invalid app.kubernetes.io/part-of label in $name"
+          exit 1
+        fi
+
+        if [[ "$managed_by" != "argocd" ]]; then
+          echo "  ❌ Missing or invalid app.kubernetes.io/managed-by label in $name"
+          exit 1
+        fi
+
+        echo "  ✅ $name metadata valid"
+      fi
+    done
+
+    # Test 5: Dry-run validation with kubectl
+    echo "5. Testing kubectl dry-run validation..."
+
+    for app_file in applications/gateway/*.yaml applications/tacos/*.yaml; do
+      if [[ -f "$app_file" ]]; then
+        local name=$(yq eval '.metadata.name' "$app_file")
+        echo "  Dry-run validating $name..."
+
+        kubectl apply --dry-run=client -f "$app_file" > /dev/null
+
+        if [[ $? -eq 0 ]]; then
+          echo "  ✅ $name passes kubectl validation"
+        else
+          echo "  ❌ $name fails kubectl validation"
+          exit 1
+        fi
+      fi
+    done
+
+    echo "=== All ArgoCD Application CRD tests passed ✅ ==="
+
+  run-test.yaml: |
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: application-crd-test
+      namespace: argocd-test
+      labels:
+        test.traffic-tacos.com/type: crd-validation
+    spec:
+      template:
+        metadata:
+          labels:
+            test.traffic-tacos.com/type: crd-validation
+        spec:
+          restartPolicy: Never
+          serviceAccountName: application-test-sa
+          containers:
+          - name: test-runner
+            image: bitnami/kubectl:1.28
+            command: ["/bin/bash", "/scripts/test-script.sh"]
+            workingDir: /workspace
+            volumeMounts:
+            - name: test-scripts
+              mountPath: /scripts
+            - name: workspace
+              mountPath: /workspace
+          volumes:
+          - name: test-scripts
+            configMap:
+              name: application-crd-test
+              defaultMode: 0755
+          - name: workspace
+            configMap:
+              name: workspace-applications  # Contains application manifests
+          backoffLimit: 3
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: application-test-sa
+  namespace: argocd-test
+  labels:
+    test.traffic-tacos.com/type: service-account
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: application-test-role
+  labels:
+    test.traffic-tacos.com/type: rbac
+rules:
+- apiGroups: ["argoproj.io"]
+  resources: ["applications", "appprojects"]
+  verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: application-test-binding
+  labels:
+    test.traffic-tacos.com/type: rbac
+subjects:
+- kind: ServiceAccount
+  name: application-test-sa
+  namespace: argocd-test
+roleRef:
+  kind: ClusterRole
+  name: application-test-role
+  apiGroup: rbac.authorization.k8s.io

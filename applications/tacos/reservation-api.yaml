@@ -1,0 +1,396 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: reservation-api
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: reservation-api
+    app.kubernetes.io/part-of: traffic-tacos
+    app.kubernetes.io/component: business-service
+    app.kubernetes.io/managed-by: argocd
+    tier: business-logic
+    service-type: core-api
+    platform: traffic-tacos
+    cost-center: engineering
+    team: backend-team
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"  # Deploy after gateway
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: traffic-tacos-deployments
+    notifications.argoproj.io/subscribe.on-health-degraded.pagerduty: reservation-api-alerts
+    link.argocd.argoproj.io/external-link: https://grafana.traffictacos.com/d/reservation-api/reservation-api-dashboard
+    performance.traffictacos.com/sla-target: "30k-rps"
+    security.traffictacos.com/pci-compliant: "false"
+    backup.traffictacos.com/required: "true"
+spec:
+  project: traffic-tacos
+
+  # Source configuration
+  source:
+    repoURL: https://github.com/traffic-tacos/reservation-api
+    targetRevision: main
+    path: k8s/manifests
+
+    # Helm configuration for Kotlin/Spring Boot service
+    helm:
+      valueFiles:
+        - values-prod.yaml
+      parameters:
+        - name: image.tag
+          value: "latest"  # Updated by CI/CD pipeline
+        - name: image.repository
+          value: "traffic-tacos/reservation-api"
+
+        # Resource allocation for high-performance requirements
+        - name: resources.requests.cpu
+          value: "500m"
+        - name: resources.requests.memory
+          value: "512Mi"
+        - name: resources.limits.cpu
+          value: "2000m"  # 2 CPU cores for 30k RPS
+        - name: resources.limits.memory
+          value: "2Gi"
+
+        # Auto-scaling configuration for traffic spikes
+        - name: autoscaling.enabled
+          value: "true"
+        - name: autoscaling.minReplicas
+          value: "5"  # Minimum replicas for high availability
+        - name: autoscaling.maxReplicas
+          value: "50"  # Scale up to 50 pods for peak traffic
+        - name: autoscaling.targetCPUUtilizationPercentage
+          value: "70"
+        - name: autoscaling.targetMemoryUtilizationPercentage
+          value: "80"
+
+        # Database configuration
+        - name: database.host
+          value: "dynamodb.ap-northeast-2.amazonaws.com"
+        - name: database.region
+          value: "ap-northeast-2"
+        - name: database.tableName
+          value: "ticket-reservation-reservations"
+
+        # Event-driven architecture configuration
+        - name: eventbridge.enabled
+          value: "true"
+        - name: eventbridge.busName
+          value: "ticket-reservation-events"
+        - name: eventbridge.region
+          value: "ap-northeast-2"
+
+        # Service mesh and observability
+        - name: serviceMonitor.enabled
+          value: "true"
+        - name: tracing.enabled
+          value: "true"
+        - name: tracing.jaegerEndpoint
+          value: "http://jaeger-collector.monitoring.svc.cluster.local:14268/api/traces"
+
+        # Security configuration
+        - name: securityContext.runAsNonRoot
+          value: "true"
+        - name: securityContext.runAsUser
+          value: "1000"
+        - name: securityContext.fsGroup
+          value: "1000"
+
+  # Destination configuration
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tacos
+
+  # Sync policy optimized for production microservice
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - RespectIgnoreDifferences=true
+      - ApplyOutOfSyncOnly=true
+      - ServerSideApply=true  # Better for complex resources
+
+    # More aggressive retry for critical service
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 5m0s
+
+  # Revision history for faster rollbacks
+  revisionHistoryLimit: 15
+
+  # Ignore expected runtime changes
+  ignoreDifferences:
+    # Ignore HPA scaling decisions
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+      jsonPointers:
+        - /status
+        - /spec/replicas
+
+    # Ignore deployment replica changes from HPA
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+
+    # Ignore service status updates
+    - group: ""
+      kind: Service
+      jsonPointers:
+        - /status
+
+    # Ignore ingress status from ALB controller
+    - group: networking.k8s.io
+      kind: Ingress
+      jsonPointers:
+        - /status
+
+  # Service information
+  info:
+    - name: Service URL (Internal)
+      value: http://reservation-api.tacos.svc.cluster.local:8080
+    - name: Health Check
+      value: http://reservation-api.tacos.svc.cluster.local:8080/health
+    - name: Metrics
+      value: http://reservation-api.tacos.svc.cluster.local:8080/actuator/prometheus
+    - name: gRPC Port
+      value: "8011"
+    - name: API Documentation
+      value: https://docs.traffictacos.com/reservation-api
+    - name: Performance Dashboard
+      value: https://grafana.traffictacos.com/d/reservation-api/reservation-api-dashboard
+
+---
+# Enhanced Network Policy for Reservation API
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: reservation-api-network-policy
+  namespace: tacos
+  labels:
+    app.kubernetes.io/name: reservation-api-network-policy
+    app.kubernetes.io/part-of: traffic-tacos
+    app.kubernetes.io/component: network-policy
+  annotations:
+    argocd.argoproj.io/sync-wave: "15"
+spec:
+  podSelector:
+    matchLabels:
+      app: reservation-api
+
+  policyTypes:
+  - Ingress
+  - Egress
+
+  # Ingress rules for microservice communication
+  ingress:
+    # Allow traffic from gateway namespace (API Gateway)
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: gateway
+      ports:
+      - protocol: TCP
+        port: 8080  # HTTP REST API
+      - protocol: TCP
+        port: 8011  # gRPC port
+
+    # Allow traffic from same namespace (inter-service communication)
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: tacos
+      ports:
+      - protocol: TCP
+        port: 8080
+      - protocol: TCP
+        port: 8011
+
+    # Allow monitoring traffic
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: monitoring
+      ports:
+      - protocol: TCP
+        port: 8080  # Health checks and metrics
+
+    # Allow traffic from reservation worker
+    - from:
+      - podSelector:
+          matchLabels:
+            app: reservation-worker
+      ports:
+      - protocol: TCP
+        port: 8080
+
+  # Egress rules for external dependencies
+  egress:
+    # DNS resolution
+    - to: []
+      ports:
+      - protocol: UDP
+        port: 53
+
+    # HTTPS for AWS services (DynamoDB, EventBridge)
+    - to: []
+      ports:
+      - protocol: TCP
+        port: 443
+
+    # Communication with other microservices
+    - to:
+      - namespaceSelector:
+          matchLabels:
+            name: tacos
+      ports:
+      - protocol: TCP
+        port: 8020  # Inventory API HTTP
+      - protocol: TCP
+        port: 8021  # Inventory API gRPC
+      - protocol: TCP
+        port: 8030  # Payment Sim API HTTP
+      - protocol: TCP
+        port: 8031  # Payment Sim API gRPC
+
+    # Access to Kubernetes API server
+    - to:
+      - namespaceSelector:
+          matchLabels:
+            name: kube-system
+      ports:
+      - protocol: TCP
+        port: 443
+
+---
+# ServiceMonitor for detailed metrics collection
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: reservation-api-metrics
+  namespace: tacos
+  labels:
+    app.kubernetes.io/name: reservation-api-metrics
+    app.kubernetes.io/part-of: traffic-tacos
+    app.kubernetes.io/component: monitoring
+  annotations:
+    argocd.argoproj.io/sync-wave: "25"
+spec:
+  selector:
+    matchLabels:
+      app: reservation-api
+      monitoring: enabled
+
+  endpoints:
+  # Spring Boot Actuator metrics
+  - port: http
+    interval: 15s  # High frequency for performance monitoring
+    path: /actuator/prometheus
+    scheme: http
+    scrapeTimeout: 10s
+
+  # JVM metrics endpoint
+  - port: http
+    interval: 30s
+    path: /actuator/metrics
+    scheme: http
+    scrapeTimeout: 5s
+
+  namespaceSelector:
+    matchNames:
+    - tacos
+
+  # Target specific labels for high-performance monitoring
+  targetLabels:
+    - app
+    - version
+    - environment
+
+---
+# Pod Disruption Budget for high availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: reservation-api-pdb
+  namespace: tacos
+  labels:
+    app.kubernetes.io/name: reservation-api-pdb
+    app.kubernetes.io/part-of: traffic-tacos
+    app.kubernetes.io/component: availability
+  annotations:
+    argocd.argoproj.io/sync-wave: "15"
+spec:
+  minAvailable: 3  # Always keep at least 3 replicas for 30k RPS
+  selector:
+    matchLabels:
+      app: reservation-api
+
+---
+# Horizontal Pod Autoscaler for traffic-based scaling
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: reservation-api-hpa
+  namespace: tacos
+  labels:
+    app.kubernetes.io/name: reservation-api-hpa
+    app.kubernetes.io/part-of: traffic-tacos
+    app.kubernetes.io/component: autoscaling
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: reservation-api
+
+  minReplicas: 5
+  maxReplicas: 50
+
+  metrics:
+  # CPU-based scaling
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+
+  # Memory-based scaling
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+  # Custom metric scaling (requests per second)
+  - type: Pods
+    pods:
+      metric:
+        name: http_requests_per_second
+      target:
+        type: AverageValue
+        averageValue: "100"  # Scale when > 100 RPS per pod
+
+  # Scale-down behavior for smooth traffic handling
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300  # 5 minutes
+      policies:
+      - type: Percent
+        value: 10  # Scale down max 10% at a time
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60   # 1 minute
+      policies:
+      - type: Percent
+        value: 50  # Scale up max 50% at a time
+        periodSeconds: 30

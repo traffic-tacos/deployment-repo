@@ -1,0 +1,276 @@
+# ArgoCD Helm Chart Values Schema
+# This file defines the configuration contract for ArgoCD deployment in EKS
+
+# Global Configuration
+global:
+  domain: argocd.traffictacos.com
+
+# ArgoCD Server Configuration
+server:
+  # High availability setup
+  replicas: 2
+
+  # Resource allocation for 30k RPS platform support
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # Auto-scaling configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  # Ingress configuration for AWS ALB
+  ingress:
+    enabled: true
+    ingressClassName: alb
+    annotations:
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
+      alb.ingress.kubernetes.io/certificate-arn: ${ACM_CERTIFICATE_ARN}
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+      alb.ingress.kubernetes.io/ssl-redirect: '443'
+    hosts:
+      - argocd.traffictacos.com
+    tls:
+      - secretName: argocd-server-tls
+        hosts:
+          - argocd.traffictacos.com
+
+  # Security context following Pod Security Standards
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    fsGroup: 999
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+
+  # Configuration for ArgoCD server
+  config:
+    # OIDC/SSO configuration (to be configured post-deployment)
+    url: https://argocd.traffictacos.com
+
+    # Repository credentials template
+    repositories: |
+      - type: git
+        url: https://github.com/traffic-tacos
+        name: traffic-tacos
+        project: traffic-tacos
+
+    # Application instance label key
+    application.instanceLabelKey: argocd.argoproj.io/instance
+
+# Application Controller Configuration
+controller:
+  replicas: 1  # Application controller does not support HA
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    fsGroup: 999
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+
+# Repository Server Configuration
+repoServer:
+  replicas: 2
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # Auto-scaling for Git operations performance
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
+
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    fsGroup: 999
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+
+# Redis HA Configuration for clustering
+redis-ha:
+  enabled: true
+
+  # High availability Redis setup
+  replicas: 3
+
+  # Resource allocation
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    fsGroup: 999
+
+# External Redis (disabled in favor of redis-ha)
+redis:
+  enabled: false
+
+# Dex (disabled - using external OIDC)
+dex:
+  enabled: false
+
+# Notifications Controller
+notifications:
+  enabled: true
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# ApplicationSet Controller
+applicationSet:
+  enabled: true
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# RBAC Configuration
+configs:
+  rbac:
+    # Default policy
+    policy.default: role:readonly
+
+    # Custom policies for Traffic Tacos teams
+    policy.csv: |
+      # Traffic Tacos Platform Team - Full access
+      p, role:platform-admin, applications, *, */*, allow
+      p, role:platform-admin, clusters, *, *, allow
+      p, role:platform-admin, repositories, *, *, allow
+
+      # Development Team - Limited access to applications
+      p, role:dev-team, applications, get, traffic-tacos/*, allow
+      p, role:dev-team, applications, sync, traffic-tacos/*, allow
+      p, role:dev-team, applications, action/*, traffic-tacos/*, allow
+
+      # Operations Team - Monitoring and troubleshooting
+      p, role:ops-team, applications, get, */*, allow
+      p, role:ops-team, logs, get, */*, allow
+
+      # Group mappings (to be configured with OIDC)
+      g, traffic-tacos:platform-team, role:platform-admin
+      g, traffic-tacos:dev-team, role:dev-team
+      g, traffic-tacos:ops-team, role:ops-team
+
+# Default Projects
+projects:
+  # Traffic Tacos main project
+  - name: traffic-tacos
+    namespace: argocd
+    description: Traffic Tacos microservices platform
+    sourceRepos:
+      - 'https://github.com/traffic-tacos/*'
+    destinations:
+      - namespace: gateway
+        server: https://kubernetes.default.svc
+      - namespace: tacos
+        server: https://kubernetes.default.svc
+    clusterResourceWhitelist:
+      - group: ''
+        kind: Namespace
+    namespaceResourceWhitelist:
+      - group: ''
+        kind: '*'
+      - group: 'apps'
+        kind: '*'
+      - group: 'networking.k8s.io'
+        kind: '*'
+      - group: 'autoscaling'
+        kind: '*'
+    roles:
+      - name: dev-team
+        description: Development team access
+        policies:
+          - 'p, proj:traffic-tacos:dev-team, applications, sync, traffic-tacos/*, allow'
+          - 'p, proj:traffic-tacos:dev-team, applications, get, traffic-tacos/*, allow'
+          - 'p, proj:traffic-tacos:dev-team, applications, action/*, traffic-tacos/*, allow'
+        groups:
+          - traffic-tacos:dev-team
+
+# Monitoring and Observability
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    namespace: argocd
+    labels:
+      app.kubernetes.io/name: argocd-metrics
+      app.kubernetes.io/part-of: argocd
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Network Policies (to be applied separately)
+networkPolicy:
+  create: false  # Applied via separate NetworkPolicy manifests
+
+# Affinity and Anti-affinity Rules
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: argocd-server
+          topologyKey: kubernetes.io/hostname

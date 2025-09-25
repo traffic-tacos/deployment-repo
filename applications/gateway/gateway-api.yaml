@@ -1,0 +1,257 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gateway-api
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: gateway-api
+    app.kubernetes.io/part-of: traffic-tacos
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/managed-by: argocd
+    tier: api-gateway
+    platform: traffic-tacos
+    cost-center: platform
+    team: platform-engineering
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"  # Deploy after infrastructure
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: traffic-tacos-deployments
+    notifications.argoproj.io/subscribe.on-health-degraded.slack: traffic-tacos-alerts
+    link.argocd.argoproj.io/external-link: https://grafana.traffictacos.com/d/gateway-api/gateway-api-dashboard
+spec:
+  project: traffic-tacos
+
+  # Source configuration
+  source:
+    repoURL: https://github.com/traffic-tacos/gateway-api
+    targetRevision: main  # Use main branch for production
+    path: k8s/manifests
+
+    # Helm configuration (if using Helm charts)
+    helm:
+      valueFiles:
+        - values-prod.yaml
+      parameters:
+        - name: image.tag
+          value: "latest"  # Will be updated by CI/CD
+        - name: ingress.enabled
+          value: "true"
+        - name: ingress.className
+          value: "alb"
+        - name: resources.requests.cpu
+          value: "250m"
+        - name: resources.requests.memory
+          value: "256Mi"
+        - name: resources.limits.cpu
+          value: "1000m"
+        - name: resources.limits.memory
+          value: "1Gi"
+        - name: autoscaling.enabled
+          value: "true"
+        - name: autoscaling.minReplicas
+          value: "3"
+        - name: autoscaling.maxReplicas
+          value: "20"
+        - name: autoscaling.targetCPUUtilizationPercentage
+          value: "70"
+
+  # Destination configuration
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gateway
+
+  # Sync policy for production deployment
+  syncPolicy:
+    automated:
+      prune: true      # Remove resources not in Git
+      selfHeal: true   # Revert manual changes
+      allowEmpty: false # Prevent empty applications
+
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - RespectIgnoreDifferences=true
+      - ApplyOutOfSyncOnly=true
+
+    # Retry configuration for failed syncs
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m0s
+
+  # Revision history limit
+  revisionHistoryLimit: 10
+
+  # Health check and sync configuration
+  ignoreDifferences:
+    # Ignore HPA changes made by metrics server
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+      jsonPointers:
+        - /status
+        - /spec/replicas
+
+    # Ignore ingress status changes
+    - group: networking.k8s.io
+      kind: Ingress
+      jsonPointers:
+        - /status
+
+  # Custom health checks
+  info:
+    - name: Service URL
+      value: https://api.traffictacos.com
+    - name: Health Check
+      value: https://api.traffictacos.com/health
+    - name: Metrics
+      value: https://api.traffictacos.com/metrics
+    - name: Documentation
+      value: https://docs.traffictacos.com/gateway-api
+
+  # Operation settings
+  operation:
+    # Sync timeout
+    sync:
+      timeout: 300s  # 5 minutes
+      prune: true
+      dryRun: false
+
+---
+# Network Policy for Gateway API
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gateway-api-network-policy
+  namespace: gateway
+  labels:
+    app.kubernetes.io/name: gateway-api-network-policy
+    app.kubernetes.io/part-of: traffic-tacos
+    app.kubernetes.io/component: network-policy
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"  # Deploy before application
+spec:
+  podSelector:
+    matchLabels:
+      app: gateway-api
+
+  policyTypes:
+  - Ingress
+  - Egress
+
+  # Ingress rules
+  ingress:
+    # Allow traffic from ALB
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: kube-system
+      - podSelector:
+          matchLabels:
+            app.kubernetes.io/name: aws-load-balancer-controller
+      ports:
+      - protocol: TCP
+        port: 8080  # Application port
+      - protocol: TCP
+        port: 8443  # HTTPS port
+
+    # Allow traffic from within the same namespace
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: gateway
+      ports:
+      - protocol: TCP
+        port: 8080
+
+    # Allow monitoring traffic
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: monitoring
+      ports:
+      - protocol: TCP
+        port: 9090  # Metrics port
+
+  # Egress rules
+  egress:
+    # Allow DNS resolution
+    - to: []
+      ports:
+      - protocol: UDP
+        port: 53
+
+    # Allow HTTPS to external services
+    - to: []
+      ports:
+      - protocol: TCP
+        port: 443
+
+    # Allow access to downstream services in tacos namespace
+    - to:
+      - namespaceSelector:
+          matchLabels:
+            name: tacos
+      ports:
+      - protocol: TCP
+        port: 8080
+      - protocol: TCP
+        port: 9090
+
+    # Allow access to Kubernetes API server
+    - to:
+      - namespaceSelector:
+          matchLabels:
+            name: kube-system
+      ports:
+      - protocol: TCP
+        port: 443
+
+---
+# Service Monitor for Prometheus (if monitoring is enabled)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: gateway-api-metrics
+  namespace: gateway
+  labels:
+    app.kubernetes.io/name: gateway-api-metrics
+    app.kubernetes.io/part-of: traffic-tacos
+    app.kubernetes.io/component: monitoring
+  annotations:
+    argocd.argoproj.io/sync-wave: "15"  # Deploy after application
+spec:
+  selector:
+    matchLabels:
+      app: gateway-api
+      monitoring: enabled
+
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    scheme: http
+
+  namespaceSelector:
+    matchNames:
+    - gateway
+
+---
+# Pod Disruption Budget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gateway-api-pdb
+  namespace: gateway
+  labels:
+    app.kubernetes.io/name: gateway-api-pdb
+    app.kubernetes.io/part-of: traffic-tacos
+    app.kubernetes.io/component: availability
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  minAvailable: 2  # Always keep at least 2 replicas during disruptions
+  selector:
+    matchLabels:
+      app: gateway-api

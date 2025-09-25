@@ -1,0 +1,57 @@
+# Deployment Repository .gitignore
+
+# Environment-specific files
+.env.deployment
+*.env
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+.cursor/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Claude Code specific (exclude from git)
+.claude/
+CLAUDE.md
+
+# Backup files from environment configuration
+*.yaml.bak
+*.yml.bak
+
+# Kubernetes secrets (real credentials)
+*secret*.yaml
+*credentials*.yaml
+!*-template.yaml
+
+# Terraform state files (if any)
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Helm charts cache
+*.tgz
+charts/
+
+# Test artifacts
+test-results/
+coverage/
+
+# Temporary deployment files
+/tmp/
+temp/
+
+# Log files
+*.log
+
+# Container build artifacts
+Dockerfile.bak

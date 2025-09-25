@@ -1,0 +1,299 @@
+# ArgoCD Application CRD Examples
+# These examples demonstrate the contract for creating ArgoCD applications for Traffic Tacos microservices
+
+---
+# Gateway API Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gateway-api
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: gateway-api
+    app.kubernetes.io/part-of: traffic-tacos
+    app.kubernetes.io/managed-by: argocd
+spec:
+  project: traffic-tacos
+  source:
+    repoURL: https://github.com/traffic-tacos/gateway-api
+    targetRevision: main
+    path: k8s/manifests
+    helm:
+      valueFiles:
+        - values-prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gateway
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m0s
+  revisionHistoryLimit: 10
+
+---
+# Reservation API Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: reservation-api
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: reservation-api
+    app.kubernetes.io/part-of: traffic-tacos
+    app.kubernetes.io/managed-by: argocd
+spec:
+  project: traffic-tacos
+  source:
+    repoURL: https://github.com/traffic-tacos/reservation-api
+    targetRevision: main
+    path: k8s/manifests
+    helm:
+      valueFiles:
+        - values-prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tacos
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m0s
+  revisionHistoryLimit: 10
+
+---
+# Inventory API Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: inventory-api
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: inventory-api
+    app.kubernetes.io/part-of: traffic-tacos
+    app.kubernetes.io/managed-by: argocd
+spec:
+  project: traffic-tacos
+  source:
+    repoURL: https://github.com/traffic-tacos/inventory-api
+    targetRevision: main
+    path: k8s/manifests
+    helm:
+      valueFiles:
+        - values-prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tacos
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m0s
+  revisionHistoryLimit: 10
+
+---
+# Payment Sim API Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: payment-sim-api
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: payment-sim-api
+    app.kubernetes.io/part-of: traffic-tacos
+    app.kubernetes.io/managed-by: argocd
+spec:
+  project: traffic-tacos
+  source:
+    repoURL: https://github.com/traffic-tacos/payment-sim-api
+    targetRevision: main
+    path: k8s/manifests
+    helm:
+      valueFiles:
+        - values-prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tacos
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m0s
+  revisionHistoryLimit: 10
+
+---
+# Reservation Worker Application (KEDA scaled)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: reservation-worker
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: reservation-worker
+    app.kubernetes.io/part-of: traffic-tacos
+    app.kubernetes.io/managed-by: argocd
+spec:
+  project: traffic-tacos
+  source:
+    repoURL: https://github.com/traffic-tacos/reservation-worker
+    targetRevision: main
+    path: k8s/manifests
+    helm:
+      valueFiles:
+        - values-prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tacos
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true  # Ignore KEDA scaling changes
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m0s
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas  # Ignore replica changes from KEDA scaling
+  revisionHistoryLimit: 10
+
+---
+# Application Project for Traffic Tacos
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: traffic-tacos
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: traffic-tacos-project
+    app.kubernetes.io/part-of: argocd
+spec:
+  description: Traffic Tacos microservices platform deployment project
+
+  # Source repositories allowed for this project
+  sourceRepos:
+    - 'https://github.com/traffic-tacos/*'
+    - 'https://charts.helm.sh/stable'  # For standard Helm charts
+    - 'https://kubernetes-sigs.github.io/gateway-api-helm-chart'  # Gateway API charts
+
+  # Allowed destinations (clusters and namespaces)
+  destinations:
+    - namespace: gateway
+      server: https://kubernetes.default.svc
+    - namespace: tacos
+      server: https://kubernetes.default.svc
+
+  # Allowed cluster-scoped resources
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+    - group: 'networking.k8s.io'
+      kind: IngressClass
+    - group: 'apiextensions.k8s.io'
+      kind: CustomResourceDefinition
+
+  # Allowed namespace-scoped resources
+  namespaceResourceWhitelist:
+    - group: ''
+      kind: '*'
+    - group: 'apps'
+      kind: '*'
+    - group: 'networking.k8s.io'
+      kind: '*'
+    - group: 'autoscaling'
+      kind: '*'
+    - group: 'policy'
+      kind: '*'
+    - group: 'keda.sh'
+      kind: '*'  # KEDA resources for reservation-worker
+    - group: 'gateway.networking.k8s.io'
+      kind: '*'  # Gateway API resources
+
+  # RBAC roles for the project
+  roles:
+    - name: dev-team
+      description: Development team with application management rights
+      policies:
+        - 'p, proj:traffic-tacos:dev-team, applications, create, traffic-tacos/*, allow'
+        - 'p, proj:traffic-tacos:dev-team, applications, update, traffic-tacos/*, allow'
+        - 'p, proj:traffic-tacos:dev-team, applications, delete, traffic-tacos/*, allow'
+        - 'p, proj:traffic-tacos:dev-team, applications, sync, traffic-tacos/*, allow'
+        - 'p, proj:traffic-tacos:dev-team, applications, action/*, traffic-tacos/*, allow'
+        - 'p, proj:traffic-tacos:dev-team, applications, get, traffic-tacos/*, allow'
+        - 'p, proj:traffic-tacos:dev-team, repositories, get, traffic-tacos/*, allow'
+        - 'p, proj:traffic-tacos:dev-team, logs, get, traffic-tacos/*, allow'
+      groups:
+        - traffic-tacos:developers
+      jwtTokens:
+        - iat: 1693910400  # Token issuance timestamp
+          exp: 1725446400  # Token expiration (1 year)
+
+    - name: ops-team
+      description: Operations team with monitoring and troubleshooting access
+      policies:
+        - 'p, proj:traffic-tacos:ops-team, applications, get, traffic-tacos/*, allow'
+        - 'p, proj:traffic-tacos:ops-team, applications, sync, traffic-tacos/*, allow'
+        - 'p, proj:traffic-tacos:ops-team, logs, get, traffic-tacos/*, allow'
+        - 'p, proj:traffic-tacos:ops-team, exec, get, traffic-tacos/*, allow'
+      groups:
+        - traffic-tacos:operations
+      jwtTokens:
+        - iat: 1693910400
+          exp: 1725446400
+
+  # Sync windows for controlled deployment times
+  syncWindows:
+    - kind: allow
+      schedule: '0 9-17 * * MON-FRI'  # Allow syncs during business hours
+      duration: 8h
+      applications:
+        - '*'
+      manualSync: true
+    - kind: deny
+      schedule: '0 18-8 * * *'  # Deny automated syncs during off-hours
+      duration: 14h
+      applications:
+        - '*'
+      manualSync: false  # Still allow manual syncs during off-hours
+
+  # Signature keys for Git commit verification (optional)
+  signatureKeys:
+    - keyID: 'traffic-tacos-signing-key'

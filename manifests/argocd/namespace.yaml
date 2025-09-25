@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+  labels:
+    name: argocd
+    app.kubernetes.io/name: argocd
+    app.kubernetes.io/part-of: traffic-tacos
+    app.kubernetes.io/managed-by: gitops
+  annotations:
+    scheduler.alpha.kubernetes.io/node-selector: ""
+    # Cost allocation for FinOps tracking
+    cost-center: "platform"
+    team: "platform-engineering"
+spec: {}
+---
+# Resource Quota for ArgoCD namespace
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: argocd-resource-quota
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-quota
+    app.kubernetes.io/part-of: traffic-tacos
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+    pods: "50"
+    persistentvolumeclaims: "10"
+    services: "20"
+    secrets: "50"
+    configmaps: "30"
+---
+# Limit Range for pod resource constraints
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: argocd-limit-range
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-limits
+    app.kubernetes.io/part-of: traffic-tacos
+spec:
+  limits:
+  - default:
+      cpu: "500m"
+      memory: "512Mi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "128Mi"
+    type: Container
+  - max:
+      cpu: "2"
+      memory: "4Gi"
+    min:
+      cpu: "50m"
+      memory: "64Mi"
+    type: Container
