@@ -15,7 +15,7 @@ spec:
   
   # Source - Git repository
   source:
-    repoURL: https://github.com/jmcunst/traffic-tacos-deployment
+    repoURL: https://github.com/traffic-tacos/deployment-repo
     targetRevision: main
     path: manifests/gateway-api
   

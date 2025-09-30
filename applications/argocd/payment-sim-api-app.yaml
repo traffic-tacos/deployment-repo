@@ -14,7 +14,7 @@ spec:
   project: traffic-tacos
   
   source:
-    repoURL: https://github.com/jmcunst/traffic-tacos-deployment
+    repoURL: https://github.com/traffic-tacos/deployment-repo
     targetRevision: main
     path: manifests/payment-sim-api
   
