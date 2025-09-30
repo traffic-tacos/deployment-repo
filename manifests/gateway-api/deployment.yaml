@@ -61,7 +61,11 @@ spec:
         - name: REDIS_ADDRESS
           value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
         - name: REDIS_PASSWORD
-          value: $(cat /mnt/secrets/REDIS_PASSWORD_FILE)
+          valueFrom:
+            secretKeyRef:
+              name: redis-password
+              key: password
+              optional: true
         - name: JWT_JWKS_ENDPOINT
           value: https://www.googleapis.com/oauth2/v3/certs
         - name: JWT_ISSUER
@@ -106,16 +110,3 @@ spec:
             port: 8000
           initialDelaySeconds: 5
           periodSeconds: 5
-        
-        volumeMounts:
-        - name: secrets-volume
-          mountPath: /mnt/secrets
-          readOnly: true
-      
-      volumes:
-      - name: secrets-volume
-        csi:
-          driver: secrets-store.csi.k8s.io
-          readOnly: true
-          volumeAttributes:
-            secretProviderClass: redis-auth-provider
