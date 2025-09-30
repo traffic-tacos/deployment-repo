@@ -6,7 +6,7 @@ metadata:
   labels:
     app: reservation-api
 spec:
-  minAvailable: 1
+  minAvailable: 3
   selector:
     matchLabels:
       app: reservation-api

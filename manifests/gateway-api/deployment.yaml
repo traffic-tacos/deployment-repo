@@ -34,6 +34,17 @@ spec:
                 operator: NotIn
                 values:
                 - monitoring
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - gateway-api
+              topologyKey: kubernetes.io/hostname
       
       tolerations:
       - key: node.karpenter.sh/initializing
@@ -59,7 +70,7 @@ spec:
         - name: GRPC_PORT
           value: "8001"
         - name: REDIS_ADDRESS
-          value: redis:6379
+          value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -89,6 +100,22 @@ spec:
         - name: AWS_WEB_IDENTITY_TOKEN_FILE
           value: /var/run/secrets/eks.amazonaws.com/serviceaccount/token
         
+        # Performance Optimization
+        - name: REDIS_POOL_SIZE
+          value: "50"
+        - name: REDIS_POOL_TIMEOUT
+          value: "3s"
+        - name: HTTP_MAX_IDLE_CONNS
+          value: "100"
+        - name: HTTP_MAX_IDLE_CONNS_PER_HOST
+          value: "50"
+        - name: HTTP_CLIENT_TIMEOUT
+          value: "5s"
+        - name: RATE_LIMIT_RPS
+          value: "1500"
+        - name: RATE_LIMIT_BURST
+          value: "2000"
+        
         resources:
           requests:
             cpu: 500m
@@ -103,10 +130,15 @@ spec:
             port: 8000
           initialDelaySeconds: 30
           periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
         
         readinessProbe:
           httpGet:
             path: /readyz
             port: 8000
           initialDelaySeconds: 5
-          periodSeconds: 5
+          periodSeconds: 3
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 2

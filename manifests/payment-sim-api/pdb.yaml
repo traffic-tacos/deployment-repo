@@ -6,7 +6,7 @@ metadata:
   labels:
     app: payment-sim-api
 spec:
-  minAvailable: 1
+  minAvailable: 3
   selector:
     matchLabels:
       app: payment-sim-api
