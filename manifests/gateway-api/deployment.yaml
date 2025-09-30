@@ -59,7 +59,7 @@ spec:
         - name: GRPC_PORT
           value: "8001"
         - name: REDIS_ADDRESS
-          value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
+          value: redis:6379
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef:
