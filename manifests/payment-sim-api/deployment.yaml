@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-sim-api
+  namespace: tacos-app
+  labels:
+    app: payment-sim-api
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-sim-api
+  template:
+    metadata:
+      labels:
+        app: payment-sim-api
+    spec:
+      containers:
+      - name: payment-sim-api
+        image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-payment-sim-api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8030
+        - containerPort: 8031
+        env:
+        - name: SERVER_PORT
+          value: "8030"
+        - name: GRPC_PORT
+          value: "8031"
+        resources:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 512Mi

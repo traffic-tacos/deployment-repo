@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-api
+  namespace: tacos-app
+  labels:
+    app: gateway-api
+    tier: gateway
+    app.kubernetes.io/name: gateway-api
+    app.kubernetes.io/part-of: traffic-tacos
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gateway-api
+  template:
+    metadata:
+      labels:
+        app: gateway-api
+        tier: gateway
+    spec:
+      serviceAccountName: gateway-api-sa
+      
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - on-demand
+              - key: workload-type
+                operator: NotIn
+                values:
+                - monitoring
+      
+      tolerations:
+      - key: node.karpenter.sh/initializing
+        operator: Exists
+        effect: NoSchedule
+      
+      containers:
+      - name: gateway-api
+        image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-gateway-api:latest
+        imagePullPolicy: Always
+        
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        - name: grpc
+          containerPort: 8001
+          protocol: TCP
+        
+        env:
+        - name: SERVER_PORT
+          value: "8000"
+        - name: GRPC_PORT
+          value: "8001"
+        - name: REDIS_ADDRESS
+          value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
+        - name: REDIS_PASSWORD
+          value: $(cat /mnt/secrets/REDIS_PASSWORD_FILE)
+        - name: JWT_JWKS_ENDPOINT
+          value: https://www.googleapis.com/oauth2/v3/certs
+        - name: JWT_ISSUER
+          value: https://accounts.google.com
+        - name: JWT_AUDIENCE
+          value: gateway-api
+        - name: BACKEND_RESERVATION_API_ADDRESS
+          value: reservation-api:8010
+        - name: BACKEND_INVENTORY_API_ADDRESS
+          value: inventory-api:8021
+        - name: BACKEND_PAYMENT_API_ADDRESS
+          value: payment-sim-api:8030
+        - name: AWS_STS_REGIONAL_ENDPOINTS
+          value: regional
+        - name: AWS_DEFAULT_REGION
+          value: ap-northeast-2
+        - name: AWS_REGION
+          value: ap-northeast-2
+        - name: AWS_ROLE_ARN
+          value: arn:aws:iam::137406935518:role/traffic-tacos-gateway-api-sa-role
+        - name: AWS_WEB_IDENTITY_TOKEN_FILE
+          value: /var/run/secrets/eks.amazonaws.com/serviceaccount/token
+        
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 2000m
+            memory: 1Gi
+        
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        
+        volumeMounts:
+        - name: secrets-volume
+          mountPath: /mnt/secrets
+          readOnly: true
+      
+      volumes:
+      - name: secrets-volume
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: redis-auth-provider

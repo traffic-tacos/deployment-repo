@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reservation-api
+  namespace: tacos-app
+  labels:
+    app: reservation-api
+    tier: backend
+    app.kubernetes.io/name: reservation-api
+    app.kubernetes.io/part-of: traffic-tacos
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: reservation-api
+  template:
+    metadata:
+      labels:
+        app: reservation-api
+        tier: backend
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - on-demand
+      
+      containers:
+      - name: reservation-api
+        image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-reservation-api:latest
+        imagePullPolicy: Always
+        
+        ports:
+        - name: http
+          containerPort: 8010
+        - name: grpc
+          containerPort: 8011
+        
+        env:
+        - name: SERVER_PORT
+          value: "8010"
+        - name: GRPC_PORT
+          value: "8011"
+        - name: REDIS_ADDRESS
+          value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
+        
+        resources:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+        
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8010
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8010
+          initialDelaySeconds: 5
+          periodSeconds: 5

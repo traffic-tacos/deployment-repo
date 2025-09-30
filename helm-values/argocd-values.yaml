@@ -1,0 +1,171 @@
+# ArgoCD Helm Values
+# Chart: argo/argo-cd v8.5.7
+# App Version: v3.1.7
+
+global:
+  domain: argocd.traffictacos.store
+
+## Argo Configs
+configs:
+  params:
+    # Gateway에서 TLS 종료하므로 insecure 모드 사용
+    server.insecure: true
+    
+  cm:
+    # GitOps 연동
+    url: https://argocd.traffictacos.store
+    
+    # Repository credentials (Secret으로 별도 관리)
+    # GitHub token은 수동으로 생성 필요
+    
+    # Application 자동 sync 설정
+    application.instanceLabelKey: argocd.argoproj.io/instance
+    
+  rbac:
+    # RBAC 정책
+    policy.default: role:readonly
+    policy.csv: |
+      p, role:org-admin, applications, *, */*, allow
+      p, role:org-admin, clusters, get, *, allow
+      p, role:org-admin, repositories, get, *, allow
+      p, role:org-admin, repositories, create, *, allow
+      p, role:org-admin, repositories, update, *, allow
+      p, role:org-admin, repositories, delete, *, allow
+      g, traffic-tacos-admin, role:org-admin
+
+## Controller
+controller:
+  replicas: 1
+  
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  
+  nodeSelector:
+    node-type: on-demand
+
+## Server
+server:
+  replicas: 2
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  
+  nodeSelector:
+    node-type: on-demand
+  
+  # Ingress 비활성화 (Gateway API 사용)
+  ingress:
+    enabled: false
+  
+  # Service 설정
+  service:
+    type: NodePort
+    port: 80
+    targetPort: 8080
+    nodePort: 30080  # Gateway API가 사용할 NodePort
+  
+  # Metrics
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+## Repo Server
+repoServer:
+  replicas: 2
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  
+  nodeSelector:
+    node-type: on-demand
+  
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+## ApplicationSet Controller
+applicationSet:
+  replicas: 1
+  
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  
+  nodeSelector:
+    node-type: on-demand
+
+## Notifications Controller
+notifications:
+  enabled: true
+  
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  
+  nodeSelector:
+    node-type: on-demand
+
+## Redis
+redis:
+  enabled: true
+  
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  
+  nodeSelector:
+    node-type: on-demand
+
+## Redis HA (선택사항 - 현재는 단일 Redis 사용)
+redis-ha:
+  enabled: false
+
+## Dex (OIDC - 선택사항)
+dex:
+  enabled: false
+
+## Resource Management
+# PodDisruptionBudget
+controller:
+  pdb:
+    enabled: true
+    minAvailable: 1
+
+server:
+  pdb:
+    enabled: true
+    minAvailable: 1
+
+repoServer:
+  pdb:
+    enabled: true
+    minAvailable: 1

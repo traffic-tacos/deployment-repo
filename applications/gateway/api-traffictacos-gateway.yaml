@@ -1,0 +1,32 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: api-traffictacos-gateway
+  namespace: gateway
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: api.traffictacos.store,argocd.traffictacos.store
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:ap-northeast-2:137406935518:certificate/467dbda7-edf0-44b7-9381-833f74dc554b"
+spec:
+  gatewayClassName: aws-alb-gateway-class
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "*.traffictacos.store"
+      allowedRoutes:
+        namespaces:
+          from: All
+    
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: "*.traffictacos.store"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: api-traffictacos-tls
+            namespace: gateway
+      allowedRoutes:
+        namespaces:
+          from: All
