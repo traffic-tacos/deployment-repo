@@ -1,0 +1,12 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: inventory-api-pdb
+  namespace: tacos-app
+  labels:
+    app: inventory-api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: inventory-api

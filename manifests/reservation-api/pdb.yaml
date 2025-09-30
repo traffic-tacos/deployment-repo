@@ -1,0 +1,12 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: reservation-api-pdb
+  namespace: tacos-app
+  labels:
+    app: reservation-api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: reservation-api
