@@ -6,7 +6,7 @@ metadata:
   labels:
     app: gateway-api
 spec:
-  minAvailable: 5
+  minAvailable: 2
   selector:
     matchLabels:
       app: gateway-api
