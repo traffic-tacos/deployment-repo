@@ -1,0 +1,13 @@
+apiVersion: gateway.k8s.aws/v1beta1
+kind: LoadBalancerConfiguration
+metadata:
+  name: alb-config
+  namespace: default
+spec:
+  loadBalancerSubnetsSelector:
+    kubernetes.io/role/elb:
+    - "1"
+  scheme: internet-facing
+  tags:
+    kubernetes.io/cluster-name: ticket-cluster
+~                                                
