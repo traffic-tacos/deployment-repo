@@ -31,6 +31,13 @@ spec:
       allowedRoutes:
         namespaces:
           from: All 
+    - name: argocd-https
+      protocol: HTTPS
+      port: 443
+      hostname: "argocd.traffictacos.store" 
+      allowedRoutes:
+        namespaces:
+          from: All 
       tls:
         mode: Terminate
         certificateRefs:
