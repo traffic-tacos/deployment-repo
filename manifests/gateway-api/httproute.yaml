@@ -1,22 +1,52 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: gateway-api-route
+  name: api-traffictacos-route
   namespace: tacos-app
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: api.traffictacos.store
 spec:
   parentRefs:
-  - name: api-traffictacos-gateway
-    namespace: gateway
+    - name: api-traffictacos-gateway
+      namespace: gateway
+      sectionName: https 
+    - name: api-traffictacos-gateway
+      namespace: gateway
+      sectionName: http   
   hostnames:
-  - api.traffictacos.store
+    - "api.traffictacos.store"
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /
-    backendRefs:
-    - name: gateway-api
-      port: 8000
-      weight: 100
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/v1
+      backendRefs:
+        - name: gateway-api
+          port: 8000
+          weight: 100
+    - matches:
+        - path:
+            type: Exact
+            value: /healthz
+      backendRefs:
+        - name: gateway-api
+          port: 8000
+    - matches:
+        - path:
+            type: Exact
+            value: /readyz
+      backendRefs:
+        - name: gateway-api
+          port: 8000
+    - matches:
+        - path:
+            type: Exact
+            value: /metrics
+      backendRefs:
+        - name: gateway-api
+          port: 8000
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /swagger
+      backendRefs:
+        - name: gateway-api
+          port: 8000
