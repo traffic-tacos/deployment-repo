@@ -1,0 +1,12 @@
+apiVersion: k6.io/v1alpha1
+kind: K6
+metadata:
+  name: httpbin-smoke-test
+  namespace: k6-test
+spec:
+  parallelism: 1
+  script:
+    configMap:
+      name: k6-test-script
+      file: test.js
+  arguments: "--tag test=httpbin --vus 10 --duration 30s"
