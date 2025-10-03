@@ -1,5 +1,9 @@
 fullnameOverride: k6-operator
 
-manager:
-  nodeSelector:
-    workload-type: "loadtest"
+nodeSelector:
+  workload-type: loadtest
+tolerations:
+  - key: "workload"
+    operator: "Equal"
+    value: "loadtest"
+    effect: "NoSchedule"
