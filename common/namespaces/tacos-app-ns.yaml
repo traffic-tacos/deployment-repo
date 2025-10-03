@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    istio.io/dataplane-mode: ambient
+    kubernetes.io/metadata.name: tacos-app
+    workload-tier: application
+  name: tacos-app
