@@ -2,9 +2,9 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: k6-operator
-  namespace: k6-operator-system
+  namespace: k6-operator
   labels:
-    app: k6-loadtest
+    app: loadtest
 spec:
   project: traffic-tacos
   
