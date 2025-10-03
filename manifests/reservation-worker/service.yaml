@@ -7,13 +7,16 @@ metadata:
     app: reservation-worker
     tier: worker
 spec:
-  type: ClusterIP
+  type: ClusterIP 
   selector:
     app: reservation-worker
   ports:
-  - name: http
-    port: 8040
-    targetPort: 8040
-  - name: grpc
-    port: 8041
-    targetPort: 8041
+    - name: http
+      port: 8040
+      targetPort: 8040
+      protocol: TCP
+    - name: grpc
+      port: 8041
+      targetPort: 8041
+      protocol: TCP
+      appProtocol: grpc

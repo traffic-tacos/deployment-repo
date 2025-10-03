@@ -7,15 +7,18 @@ metadata:
     app: payment-sim-api
     tier: backend
 spec:
-  type: NodePort
+  type: NodePort 
   selector:
     app: payment-sim-api
   ports:
-  - name: http
-    port: 8030
-    targetPort: 8030
-    nodePort: 30030
-  - name: grpc
-    port: 8031
-    targetPort: 8031
-    nodePort: 30031
+    - name: http
+      port: 8030
+      targetPort: 8030
+      nodePort: 30030
+      protocol: TCP
+    - name: grpc
+      port: 8031
+      targetPort: 8031
+      nodePort: 30031
+      protocol: TCP
+      appProtocol: grpc

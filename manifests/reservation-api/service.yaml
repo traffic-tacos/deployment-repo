@@ -7,15 +7,18 @@ metadata:
     app: reservation-api
     tier: backend
 spec:
-  type: NodePort
+  type: NodePort 
   selector:
     app: reservation-api
   ports:
-  - name: http
-    port: 8010
-    targetPort: 8010
-    nodePort: 30010
-  - name: grpc
-    port: 8011
-    targetPort: 8011
-    nodePort: 30011
+    - name: http
+      port: 8010
+      targetPort: 8010
+      nodePort: 30010
+      protocol: TCP
+    - name: grpc
+      port: 8011
+      targetPort: 8011
+      nodePort: 30011
+      protocol: TCP
+      appProtocol: grpc

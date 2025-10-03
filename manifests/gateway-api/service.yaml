@@ -6,18 +6,24 @@ metadata:
   labels:
     app: gateway-api
     tier: gateway
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: "/healthz"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: "HTTP"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval-seconds: "10"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout-seconds: "5"
 spec:
-  type: NodePort
+  type: NodePort 
   selector:
     app: gateway-api
   ports:
-  - name: http
-    port: 8000
-    targetPort: 8000
-    nodePort: 30000
-    protocol: TCP
-  - name: grpc
-    port: 8001
-    targetPort: 8001
-    nodePort: 30001
-    protocol: TCP
+    - name: http
+      port: 8000        
+      targetPort: 8000  
+      nodePort: 30000   
+      protocol: TCP
+    - name: grpc
+      port: 8001
+      targetPort: 8001
+      nodePort: 30001
+      protocol: TCP
+      appProtocol: grpc

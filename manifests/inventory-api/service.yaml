@@ -7,15 +7,18 @@ metadata:
     app: inventory-api
     tier: backend
 spec:
-  type: NodePort
+  type: NodePort 
   selector:
     app: inventory-api
   ports:
-  - name: http
-    port: 8020
-    targetPort: 8020
-    nodePort: 30020
-  - name: grpc
-    port: 8021
-    targetPort: 8021
-    nodePort: 30021
+    - name: http
+      port: 8020
+      targetPort: 8020
+      nodePort: 30020
+      protocol: TCP
+    - name: grpc
+      port: 8021
+      targetPort: 8021
+      nodePort: 30021
+      protocol: TCP
+      appProtocol: grpc
