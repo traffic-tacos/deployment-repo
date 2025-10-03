@@ -9,5 +9,4 @@ spec:
     - "1"
   scheme: internet-facing
   tags:
-    kubernetes.io/cluster-name: ticket-cluster
-~                                                
+    kubernetes.io/cluster-name: ticket-cluster                                
