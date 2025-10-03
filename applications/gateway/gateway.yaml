@@ -23,20 +23,14 @@ spec:
       hostname: "api.traffictacos.store"
       allowedRoutes:
         namespaces:
-          from: Selector
-          selector:
-            matchLabels:
-              kubernetes.io/metadata.name: "tacos-app"
+          from: All 
     - name: https
       protocol: HTTPS
       port: 443
       hostname: "api.traffictacos.store"
       allowedRoutes:
         namespaces:
-          from: Selector
-          selector:
-            matchLabels:
-              kubernetes.io/metadata.name: "tacos-app"
+          from: All 
       tls:
         mode: Terminate
         certificateRefs:
