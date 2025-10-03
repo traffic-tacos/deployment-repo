@@ -13,7 +13,7 @@ spec:
       chart: k6-operator
       targetRevision: 4.0.0
       helm:
-        includeCRDs: true
+        #includeCRDs: true
         valueFiles:
           - $values/manifests/k6/values.yaml
     - repoURL: https://github.com/traffic-tacos/deployment-repo
