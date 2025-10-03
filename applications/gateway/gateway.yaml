@@ -8,6 +8,12 @@ metadata:
     external-dns.alpha.kubernetes.io/ttl: "300"
     service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:ap-northeast-2:137406935518:certificate/467dbda7-edf0-44b7-9381-833f74dc554b"
     alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+    alb.ingress.kubernetes.io/success-codes: "200"
 spec:
   gatewayClassName: aws-alb-gateway-class
   listeners:
