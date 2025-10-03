@@ -31,6 +31,12 @@ spec:
       allowedRoutes:
         namespaces:
           from: All 
+      tls: 
+        mode: Terminate
+        certificateRefs:
+        - kind: Secret
+          name: api-traffictacos-tls
+          namespace: gateway
     - name: argocd-https
       protocol: HTTPS
       port: 443
