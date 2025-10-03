@@ -1,5 +1,5 @@
 fullnameOverride: k6-operator
 
-# manager:
-#   nodeSelector:
-#     node-type: "loadtest"
+manager:
+  nodeSelector:
+    workload-type: "loadtest"

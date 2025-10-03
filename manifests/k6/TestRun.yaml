@@ -12,8 +12,8 @@ spec:
       file: script.js
   arguments: "-o experimental-prometheus-rw --tag testid=test-1"
   runner:
-    # nodeSelector:
-    #   node-type: "loadtest"
+    nodeSelector:
+      workload-type: "loadtest"
     image: grafana/k6:0.51.0
     serviceAccountName: k6-runner
     env:
