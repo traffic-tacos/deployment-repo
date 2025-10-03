@@ -49,4 +49,17 @@ spec:
         certificateRefs:
         - kind: Secret
           name: api-traffictacos-tls
+          namespace: gateway         
+    - name: kiali-https
+      protocol: HTTPS
+      port: 443
+      hostname: "kiali.traffictacos.store"
+      allowedRoutes:
+        namespaces:
+          from: All
+      tls:
+        mode: Terminate
+        certificateRefs:
+        - kind: Secret
+          name: api-traffictacos-tls
           namespace: gateway
