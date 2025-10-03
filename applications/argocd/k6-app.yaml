@@ -1,0 +1,47 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: k6-operator
+  namespace: k6-operator-system
+  labels:
+    app: k6-loadtest
+spec:
+  project: traffic-tacos
+  
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: k6-operator
+      targetRevision: 4.0.0
+      helm:
+      valueFiles:
+        - $values/manifests/k6/values.yaml
+    - repoURL: https://github.com/traffic-tacos/deployment-repo.git
+      targetRevision: main
+      ref: values
+      path: .
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: load-test
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    
+    syncOptions:
+      - CreateNamespace=true
+    
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas

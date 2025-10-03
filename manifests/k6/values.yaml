@@ -1,0 +1,5 @@
+fullnameOverride: k6-operator
+
+# manager:
+#   nodeSelector:
+#     node-type: "loadtest"
