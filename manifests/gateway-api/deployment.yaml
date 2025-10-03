@@ -6,10 +6,11 @@ metadata:
   labels:
     app: gateway-api
     tier: gateway
+    workload-type: critical
     app.kubernetes.io/name: gateway-api
     app.kubernetes.io/part-of: traffic-tacos
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: gateway-api
@@ -18,6 +19,7 @@ spec:
       labels:
         app: gateway-api
         tier: gateway
+        workload-type: critical
     spec:
       serviceAccountName: gateway-api-sa
       
@@ -26,14 +28,18 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
+              - key: workload-type
+                operator: In
+                values:
+                - critical
               - key: node-type
                 operator: In
                 values:
                 - on-demand
-              - key: workload-type
-                operator: NotIn
+              - key: karpenter.sh/capacity-type
+                operator: In
                 values:
-                - monitoring
+                - on-demand
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 100
@@ -86,7 +92,7 @@ spec:
         - name: BACKEND_RESERVATION_API_ADDRESS
           value: reservation-api:8010
         - name: BACKEND_INVENTORY_API_ADDRESS
-          value: inventory-api:8021
+          value: inventory-api:8020
         - name: BACKEND_PAYMENT_API_ADDRESS
           value: payment-sim-api:8030
         - name: AWS_STS_REGIONAL_ENDPOINTS
@@ -99,8 +105,6 @@ spec:
           value: arn:aws:iam::137406935518:role/traffic-tacos-gateway-api-sa-role
         - name: AWS_WEB_IDENTITY_TOKEN_FILE
           value: /var/run/secrets/eks.amazonaws.com/serviceaccount/token
-        
-        # Performance Optimization
         - name: REDIS_POOL_SIZE
           value: "50"
         - name: REDIS_POOL_TIMEOUT

@@ -6,6 +6,9 @@ metadata:
   labels:
     app: payment-sim-api
     tier: backend
+    workload-type: general
+    app.kubernetes.io/name: payment-sim-api
+    app.kubernetes.io/part-of: traffic-tacos
 spec:
   replicas: 2
   selector:
@@ -15,19 +18,62 @@ spec:
     metadata:
       labels:
         app: payment-sim-api
+        tier: backend
+        workload-type: general
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: workload-type
+                operator: In
+                values:
+                - general
+              - key: node-type
+                operator: In
+                values:
+                - mix
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - payment-sim-api
+              topologyKey: kubernetes.io/hostname
+      
+      tolerations:
+      - key: karpenter.sh/capacity-type
+        operator: Equal
+        value: spot
+        effect: NoSchedule
+      - key: node.karpenter.sh/initializing
+        operator: Exists
+        effect: NoSchedule
+      
       containers:
       - name: payment-sim-api
         image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-payment-sim-api:latest
         imagePullPolicy: Always
+        
         ports:
-        - containerPort: 8030
-        - containerPort: 8031
+        - name: http
+          containerPort: 8030
+          protocol: TCP
+        - name: grpc
+          containerPort: 8031
+          protocol: TCP
+        
         env:
         - name: SERVER_PORT
           value: "8030"
         - name: GRPC_PORT
           value: "8031"
+        
         resources:
           requests:
             cpu: 250m
@@ -35,3 +81,21 @@ spec:
           limits:
             cpu: 1000m
             memory: 512Mi
+        
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8030
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8030
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3

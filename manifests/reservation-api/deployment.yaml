@@ -6,6 +6,7 @@ metadata:
   labels:
     app: reservation-api
     tier: backend
+    workload-type: general
     app.kubernetes.io/name: reservation-api
     app.kubernetes.io/part-of: traffic-tacos
 spec:
@@ -18,16 +19,41 @@ spec:
       labels:
         app: reservation-api
         tier: backend
+        workload-type: general
     spec:
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
+              - key: workload-type
+                operator: In
+                values:
+                - general
               - key: node-type
                 operator: In
                 values:
-                - on-demand
+                - mix
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - reservation-api
+              topologyKey: kubernetes.io/hostname
+      
+      tolerations:
+      - key: karpenter.sh/capacity-type
+        operator: Equal
+        value: spot
+        effect: NoSchedule
+      - key: node.karpenter.sh/initializing
+        operator: Exists
+        effect: NoSchedule
       
       containers:
       - name: reservation-api
@@ -37,8 +63,10 @@ spec:
         ports:
         - name: http
           containerPort: 8010
+          protocol: TCP
         - name: grpc
           containerPort: 8011
+          protocol: TCP
         
         env:
         - name: SERVER_PORT
@@ -62,6 +90,8 @@ spec:
             port: 8010
           initialDelaySeconds: 30
           periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
         
         readinessProbe:
           httpGet:
@@ -69,3 +99,5 @@ spec:
             port: 8010
           initialDelaySeconds: 5
           periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3

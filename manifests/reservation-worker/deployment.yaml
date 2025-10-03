@@ -6,8 +6,11 @@ metadata:
   labels:
     app: reservation-worker
     tier: worker
+    workload-type: general
+    app.kubernetes.io/name: reservation-worker
+    app.kubernetes.io/part-of: traffic-tacos
 spec:
-  replicas: 2
+  replicas: 1  # KEDA will manage scaling
   selector:
     matchLabels:
       app: reservation-worker
@@ -15,14 +18,56 @@ spec:
     metadata:
       labels:
         app: reservation-worker
+        tier: worker
+        workload-type: general
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: workload-type
+                operator: In
+                values:
+                - general
+              - key: node-type
+                operator: In
+                values:
+                - mix
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - reservation-worker
+              topologyKey: kubernetes.io/hostname
+      
+      tolerations:
+      - key: karpenter.sh/capacity-type
+        operator: Equal
+        value: spot
+        effect: NoSchedule
+      - key: node.karpenter.sh/initializing
+        operator: Exists
+        effect: NoSchedule
+      
       containers:
       - name: reservation-worker
         image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-reservation-worker:latest
         imagePullPolicy: Always
+        
         ports:
-        - containerPort: 8040
-        - containerPort: 8041
+        - name: http
+          containerPort: 8040
+          protocol: TCP
+        - name: grpc
+          containerPort: 8041
+          protocol: TCP
+        
         env:
         - name: SERVER_PORT
           value: "8040"
@@ -30,6 +75,7 @@ spec:
           value: "8041"
         - name: REDIS_ADDRESS
           value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
+        
         resources:
           requests:
             cpu: 250m
@@ -37,3 +83,21 @@ spec:
           limits:
             cpu: 1000m
             memory: 512Mi
+        
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8040
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8040
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
