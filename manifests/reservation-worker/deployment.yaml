@@ -62,17 +62,12 @@ spec:
         
         ports:
         - name: http
-          containerPort: 8040
-          protocol: TCP
-        - name: grpc
-          containerPort: 8041
+          containerPort: 8080
           protocol: TCP
         
         env:
-        - name: SERVER_PORT
-          value: "8040"
-        - name: GRPC_PORT
-          value: "8041"
+        - name: PORT
+          value: "8080"
         - name: REDIS_ADDRESS
           value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
         - name: SQS_QUEUE_URL
@@ -93,7 +88,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 8040
+            port: 8080
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
@@ -102,7 +97,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /readyz
-            port: 8040
+            port: 8080
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 3
