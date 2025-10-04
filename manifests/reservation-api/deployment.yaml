@@ -75,6 +75,12 @@ spec:
           value: "8011"
         - name: REDIS_ADDRESS
           value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
+        - name: REDIS_TLS_ENABLED
+          value: "true"
+        - name: REDIS_TLS_INSECURE_SKIP_VERIFY
+          value: "true"
+        - name: INVENTORY_GRPC_ADDR
+          value: inventory-api:8020
         
         resources:
           requests:
@@ -86,7 +92,7 @@ spec:
         
         livenessProbe:
           httpGet:
-            path: /healthz
+            path: /actuator/health/liveness
             port: 8010
           initialDelaySeconds: 30
           periodSeconds: 10
@@ -95,7 +101,7 @@ spec:
         
         readinessProbe:
           httpGet:
-            path: /readyz
+            path: /actuator/health/readiness
             port: 8010
           initialDelaySeconds: 5
           periodSeconds: 5
