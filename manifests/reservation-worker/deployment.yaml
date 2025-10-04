@@ -68,6 +68,8 @@ spec:
         env:
         - name: PORT
           value: "8080"
+        - name: AWS_REGION
+          value: ap-northeast-2
         - name: REDIS_ADDRESS
           value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
         - name: SQS_QUEUE_URL
@@ -86,8 +88,7 @@ spec:
             memory: 512Mi
         
         livenessProbe:
-          httpGet:
-            path: /healthz
+          tcpSocket:
             port: 8080
           initialDelaySeconds: 30
           periodSeconds: 10
@@ -95,8 +96,7 @@ spec:
           failureThreshold: 3
         
         readinessProbe:
-          httpGet:
-            path: /readyz
+          tcpSocket:
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 5
