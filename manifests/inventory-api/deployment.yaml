@@ -61,18 +61,13 @@ spec:
         imagePullPolicy: Always
         
         ports:
-        - name: http
-          containerPort: 8020
-          protocol: TCP
         - name: grpc
-          containerPort: 8021
+          containerPort: 8020
           protocol: TCP
         
         env:
-        - name: SERVER_PORT
-          value: "8020"
         - name: GRPC_PORT
-          value: "8021"
+          value: "8020"
         
         resources:
           requests:
