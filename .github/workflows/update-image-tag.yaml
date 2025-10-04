@@ -1,0 +1,63 @@
+name: Update Image Tag
+
+on:
+  repository_dispatch:
+    types: [update-image-tag]
+
+permissions:
+  contents: write
+
+jobs:
+  update-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout deployment repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update image tag in manifest
+        env:
+          SERVICE_NAME: ${{ github.event.client_payload.service_name }}
+          IMAGE_TAG: ${{ github.event.client_payload.image_tag }}
+          IMAGE_REGISTRY: ${{ github.event.client_payload.image_registry }}
+        run: |
+          echo "Updating $SERVICE_NAME to tag $IMAGE_TAG"
+          
+          MANIFEST_FILE="manifests/${SERVICE_NAME}/deployment.yaml"
+          
+          if [ ! -f "$MANIFEST_FILE" ]; then
+            echo "Error: Manifest file not found: $MANIFEST_FILE"
+            exit 1
+          fi
+          
+          # Update image tag using sed
+          sed -i "s|image: ${IMAGE_REGISTRY}/traffic-tacos-${SERVICE_NAME}:.*|image: ${IMAGE_REGISTRY}/traffic-tacos-${SERVICE_NAME}:${IMAGE_TAG}|g" "$MANIFEST_FILE"
+          
+          # Verify the change
+          echo "Updated manifest:"
+          grep "image:" "$MANIFEST_FILE"
+
+      - name: Commit and push changes
+        env:
+          SERVICE_NAME: ${{ github.event.client_payload.service_name }}
+          IMAGE_TAG: ${{ github.event.client_payload.image_tag }}
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add manifests/${SERVICE_NAME}/deployment.yaml
+          
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          
+          git commit -m "chore: Update ${SERVICE_NAME} image to ${IMAGE_TAG}"
+          git push
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Successfully updated ${{ github.event.client_payload.service_name }} to ${{ github.event.client_payload.image_tag }}"
+
