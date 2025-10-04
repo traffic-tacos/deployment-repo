@@ -83,6 +83,10 @@ spec:
               name: redis-password
               key: password
               optional: true
+        - name: REDIS_TLS_ENABLED
+          value: "true"
+        - name: REDIS_TLS_INSECURE_SKIP_VERIFY
+          value: "true"
         - name: JWT_JWKS_ENDPOINT
           value: https://www.googleapis.com/oauth2/v3/certs
         - name: JWT_ISSUER
