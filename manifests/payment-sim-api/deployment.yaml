@@ -64,15 +64,16 @@ spec:
         - name: http
           containerPort: 8030
           protocol: TCP
-        - name: grpc
-          containerPort: 8031
-          protocol: TCP
         
         env:
-        - name: SERVER_PORT
+        - name: PORT
           value: "8030"
-        - name: GRPC_PORT
-          value: "8031"
+        - name: WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: payment-webhook-secret
+              key: secret
+              optional: true
         
         resources:
           requests:
