@@ -3,6 +3,8 @@ kind: TestRun
 metadata:
   name: test-1
   namespace: load-test
+  labels:
+    app.kubernetes.io/name: load-test
 spec:
   parallelism: 3
   separate: true
@@ -23,7 +25,7 @@ spec:
     serviceAccountName: k6-runner
     env:
       - name: TARGET_BASE_URL
-        value: "https://test.k6.io"
+        value: "https://quickpizza.grafana.com"
       - name: K6_PROMETHEUS_RW_SERVER_URL
         value: "https://aps-workspaces.ap-northeast-2.amazonaws.com/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write"
       - name: K6_PROMETHEUS_RW_SIGV4_REGION
