@@ -83,8 +83,7 @@ spec:
             memory: 512Mi
         
         livenessProbe:
-          httpGet:
-            path: /healthz
+          tcpSocket:
             port: 8020
           initialDelaySeconds: 30
           periodSeconds: 10
@@ -92,8 +91,7 @@ spec:
           failureThreshold: 3
         
         readinessProbe:
-          httpGet:
-            path: /readyz
+          tcpSocket:
             port: 8020
           initialDelaySeconds: 5
           periodSeconds: 5
