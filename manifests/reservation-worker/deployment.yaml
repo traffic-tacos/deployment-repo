@@ -75,6 +75,12 @@ spec:
           value: "8041"
         - name: REDIS_ADDRESS
           value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
+        - name: SQS_QUEUE_URL
+          value: https://sqs.ap-northeast-2.amazonaws.com/137406935518/reservation-queue
+        - name: INVENTORY_GRPC_ADDR
+          value: inventory-api:8020
+        - name: RESERVATION_API_BASE
+          value: http://reservation-api:8010
         
         resources:
           requests:
