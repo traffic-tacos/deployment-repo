@@ -79,8 +79,9 @@ spec:
         - name: RESERVATION_API_BASE
           value: http://reservation-api:8010
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: http://otel-collector-collector.otel-collector:4318
-        
+          value: "http://otel-collector-collector.otel-collector:4317"
+        - name: OTEL_EXPORTER_OTLP_PROTOCOL
+          value: "grpc"
         resources:
           requests:
             cpu: 250m
