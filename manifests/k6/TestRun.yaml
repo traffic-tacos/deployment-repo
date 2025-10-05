@@ -4,7 +4,8 @@ metadata:
   name: test-1
   namespace: load-test
   labels:
-    app.kubernetes.io/name: load-test
+    app.kubernetes.io/name: load-test-testrun
+    app.kubernetes.io/component: load-test
 spec:
   parallelism: 3
   separate: true
@@ -28,9 +29,8 @@ spec:
         value: "https://quickpizza.grafana.com"
       - name: K6_PROMETHEUS_RW_SERVER_URL
         value: "https://aps-workspaces.ap-northeast-2.amazonaws.com/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write"
-      - name: K6_PROMETHEUS_RW_SIGV4_REGION
-        value: "ap-northeast-2"
       - name: K6_PROMETHEUS_RW_TREND_STATS
         value: "p(90),p(95),p(99),max"
       - name: K6_PROMETHEUS_RW_STALE_MARKERS
         value: "true"
+      # K6_PROMETHEUS_RW_SIGV4_REGION 관련 변수 설정 X

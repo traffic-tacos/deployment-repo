@@ -1,0 +1,53 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-loadtest
+  namespace: load-test
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      serviceAccountName: k6-runner
+      nodeSelector:
+        workload-type: loadtest
+      tolerations:
+      - effect: NoSchedule
+        key: workload
+        operator: Equal
+        value: loadtest
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: k6-script-for-test
+        name: k6-test-volume
+      containers:
+      - name: k6
+        image: grafana/k6:latest
+        command: ["k6"]
+        args:
+          - "run"
+          - "--out"
+          - "experimental-prometheus-rw=http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write"          - "/test/script.js"
+        ports:
+        - containerPort: 6565
+        volumeMounts:
+        - mountPath: /test
+          name: k6-test-volume
+          readOnly: true
+        env:
+        - name: K6_OUT
+          value: experimental-prometheus-rw
+        - name: K6_PROMETHEUS_RW_SERVER_URL
+          value: http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write
+        - name: K6_PROMETHEUS_RW_TREND_STATS
+          value: "p(90),p(95),p(99),max"
+        - name: K6_PROMETHEUS_RW_STALE_MARKERS
+          value: "true"
+      - name: aws-sigv4-proxy
+        image: public.ecr.aws/aws-observability/aws-sigv4-proxy:latest
+        args:
+          - "--name=aps"
+          - "--region=ap-northeast-2"
+          - "--host=aps-workspaces.ap-northeast-2.amazonaws.com"
+          - "--port=:8005"
+      restartPolicy: Never
