@@ -36,7 +36,8 @@ spec:
         args:
           - "run"
           - "--out"
-          - "experimental-prometheus-rw=http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write"          - "/test/script.js"
+          - "experimental-prometheus-rw=http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write"
+          - "/test/script.js"
         ports:
         - containerPort: 6565
         volumeMounts:
@@ -45,7 +46,7 @@ spec:
           readOnly: true
         env:
         - name: TARGET_BASE_URL
-          value: 'https://api.traffictacos.store/'
+          value: 'https://api.traffictacos.store'
         - name: K6_OUT
           value: experimental-prometheus-rw
         - name: K6_PROMETHEUS_RW_SERVER_URL
