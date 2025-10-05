@@ -10,7 +10,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: gateway-api
-  minReplicas: 1
+  minReplicas: 5
   maxReplicas: 50
   metrics:
   - type: Resource
@@ -18,13 +18,13 @@ spec:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 70
+        averageUtilization: 65
   - type: Resource
     resource:
       name: memory
       target:
         type: Utilization
-        averageUtilization: 80
+        averageUtilization: 70
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 300
@@ -33,7 +33,7 @@ spec:
         value: 50
         periodSeconds: 60
       - type: Pods
-        value: 2
+        value: 3
         periodSeconds: 60
       selectPolicy: Min
     scaleUp:
@@ -41,8 +41,8 @@ spec:
       policies:
       - type: Percent
         value: 100
-        periodSeconds: 30
+        periodSeconds: 15
       - type: Pods
-        value: 4
-        periodSeconds: 30
+        value: 10
+        periodSeconds: 15
       selectPolicy: Max
