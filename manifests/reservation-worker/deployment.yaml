@@ -78,6 +78,8 @@ spec:
           value: inventory-api:8020
         - name: RESERVATION_API_BASE
           value: http://reservation-api:8010
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://otel-collector-collector.otel-collector:4317
         
         resources:
           requests:
