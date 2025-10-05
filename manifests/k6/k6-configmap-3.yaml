@@ -60,7 +60,7 @@ data:
       },
     };
 
-    const BASE = __ENV.TARGET_BASE_URL || 'https://example.com';
+    const BASE = __ENV.TARGET_BASE_URL || 'https://traffictacos.store';
 
     export function startAndLeave() {
       group('browse_and_quit', () => {
