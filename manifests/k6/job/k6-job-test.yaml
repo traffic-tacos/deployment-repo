@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: k6-loadtest-api
+  name: k6-loadtest-small
   namespace: load-test
   labels:
     app.kubernetes.io/name: load-test-job
@@ -10,11 +10,11 @@ spec:
   backoffLimit: 0
   selector:
     matchLabels:
-      job-name: k6-loadtest-api
+      job-name: k6-loadtest
   template:
     metadata:
       labels:
-        job-name: k6-loadtest-api
+        job-name: k6-loadtest-small
     spec:
       serviceAccountName: k6-runner
       nodeSelector:
@@ -27,7 +27,7 @@ spec:
       volumes:
       - configMap:
           defaultMode: 420
-          name: k6-script-for-apitest
+          name: k6-script-small
         name: k6-test-volume
       containers:
       - name: k6
