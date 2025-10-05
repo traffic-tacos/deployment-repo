@@ -10,25 +10,12 @@ spec:
     name: reservation-worker
   minReplicaCount: 1
   maxReplicaCount: 20
-  pollingInterval: 15
-  cooldownPeriod: 60
+  pollingInterval: 30
+  cooldownPeriod: 300
   triggers:
-  - type: redis
+  - type: aws-sqs-queue
     metadata:
-      address: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
-      listName: reservation_queue
-      listLength: "10"
-      activationListLength: "5"
-    authenticationRef:
-      name: redis-auth-trigger
----
-apiVersion: keda.sh/v1alpha1
-kind: TriggerAuthentication
-metadata:
-  name: redis-auth-trigger
-  namespace: tacos-app
-spec:
-  secretTargetRef:
-  - parameter: password
-    name: redis-password
-    key: password
+      queueURL: https://sqs.ap-northeast-2.amazonaws.com/137406935518/reservation-queue
+      queueLength: "10"
+      awsRegion: ap-northeast-2
+      identityOwner: operator
