@@ -43,6 +43,12 @@ spec:
           value: "p(90),p(95),p(99),max"
         - name: K6_PROMETHEUS_RW_STALE_MARKERS
           value: "true"
+        - name: K6_PROMETHEUS_RW_TAGS
+          value: "testid,tags,scenario,url,method,status"
+        # - name: K6_TAGS
+        #   value: "testid=test-demo-2"
+        - name: K6_PROMETHEUS_RW_PUSH_INTERVAL
+          value: "15s"
       - name: aws-sigv4-proxy
         image: public.ecr.aws/aws-observability/aws-sigv4-proxy:latest
         args:
