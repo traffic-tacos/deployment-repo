@@ -9,7 +9,7 @@ spec:
   source:
     repoURL: https://github.com/traffic-tacos/deployment-repo
     targetRevision: main
-    path: argocd/
+    path: applications/argocd/
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
