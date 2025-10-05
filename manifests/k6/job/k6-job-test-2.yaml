@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: k6-loadtest-2
+  name: k6-loadtest2
   namespace: load-test
 spec:
   backoffLimit: 0
@@ -18,7 +18,7 @@ spec:
       volumes:
       - configMap:
           defaultMode: 420
-          name: k6-script-for-test-2
+          name: k6-script-for-test2
         name: k6-test-volume
       containers:
       - name: k6
@@ -27,7 +27,8 @@ spec:
         args:
           - "run"
           - "--out"
-          - "experimental-prometheus-rw=http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write"          - "/test/script.js"
+          - "experimental-prometheus-rw=http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write"
+          - "/test/script.js"
         ports:
         - containerPort: 6565
         volumeMounts:
@@ -43,6 +44,12 @@ spec:
           value: "p(90),p(95),p(99),max"
         - name: K6_PROMETHEUS_RW_STALE_MARKERS
           value: "true"
+        - name: K6_PROMETHEUS_RW_TAGS
+          value: "testid,tags,scenario,url,method,status"
+        - name: K6_TAGS
+          value: "testid=test-demo-2"
+        - name: K6_PROMETHEUS_RW_PUSH_INTERVAL
+          value: "15s"
       - name: aws-sigv4-proxy
         image: public.ecr.aws/aws-observability/aws-sigv4-proxy:latest
         args:
