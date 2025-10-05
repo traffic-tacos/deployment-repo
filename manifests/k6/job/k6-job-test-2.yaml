@@ -5,6 +5,11 @@ metadata:
   namespace: load-test
 spec:
   backoffLimit: 0
+        volumes:
+      - configMap:
+          defaultMode: 420
+          name: k6-script-for-test2
+        name: k6-test-volume
   template:
     spec:
       serviceAccountName: k6-runner
