@@ -3,14 +3,23 @@ kind: Job
 metadata:
   name: k6-loadtest2
   namespace: load-test
+  labels:
+    app.kubernetes.io/name: load-test-job
+    app.kubernetes.io/component: load-test
 spec:
   backoffLimit: 0
+  selector:
+    matchLabels:
+      job-name: k6-loadtest2  # ← 추가
   volumes:
   - configMap:
       defaultMode: 420
       name: k6-script-for-test2
       name: k6-test-volume
   template:
+    metadata:
+      labels:
+        job-name: k6-loadtest2
     spec:
       serviceAccountName: k6-runner
       nodeSelector:
