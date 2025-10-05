@@ -15,7 +15,7 @@ spec:
   triggers:
   - type: aws-sqs-queue
     metadata:
-      queueURL: https://sqs.ap-northeast-2.amazonaws.com/137406935518/reservation-queue
+      queueURL: https://sqs.ap-northeast-2.amazonaws.com/137406935518/traffic-tacos-reservation-events
       queueLength: "10"
       awsRegion: ap-northeast-2
       identityOwner: operator
