@@ -10,7 +10,7 @@ metadata:
     app.kubernetes.io/name: reservation-worker
     app.kubernetes.io/part-of: traffic-tacos
 spec:
-  replicas: 1  # KEDA will manage scaling
+  replicas: 1  
   selector:
     matchLabels:
       app: reservation-worker

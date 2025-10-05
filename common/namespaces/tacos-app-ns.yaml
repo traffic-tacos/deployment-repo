@@ -5,4 +5,5 @@ metadata:
     istio.io/dataplane-mode: ambient
     kubernetes.io/metadata.name: tacos-app
     workload-tier: application
+    istio-injection: enabled
   name: tacos-app
