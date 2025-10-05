@@ -52,7 +52,7 @@ spec:
         - name: K6_PROMETHEUS_RW_TAGS
           value: "testid,tags,scenario,url,method,status"
         - name: K6_TAGS
-          value: "testid=test-demo-2"
+          value: '{"testid":"test-demo-2"}'
         - name: K6_PROMETHEUS_RW_PUSH_INTERVAL
           value: "15s"
       - name: aws-sigv4-proxy
