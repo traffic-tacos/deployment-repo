@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: k6-operator
-  namespace: k6-operator
+  namespace: argocd
   labels:
     app: loadtest
 spec:
@@ -24,22 +24,23 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: load-test
-  
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-      allowEmpty: false
+
+  # (tmp) Auto-Sync OFF
+  # syncPolicy:
+  #   automated:
+  #     prune: true
+  #     selfHeal: true
+  #     allowEmpty: false
     
-    syncOptions:
-      - CreateNamespace=true
+    # syncOptions:
+    #   - CreateNamespace=true
     
-    retry:
-      limit: 5
-      backoff:
-        duration: 5s
-        factor: 2
-        maxDuration: 3m
+    # retry:
+    #   limit: 5
+    #   backoff:
+    #     duration: 5s
+    #     factor: 2
+    #     maxDuration: 3m
   
   ignoreDifferences:
     - group: apps

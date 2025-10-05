@@ -5,6 +5,8 @@ metadata:
   namespace: argocd
   labels:
     app.kubernetes.io/name: k6-job
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
