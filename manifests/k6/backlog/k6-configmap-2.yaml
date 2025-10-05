@@ -16,9 +16,9 @@ data:
     export const errorRate = new Rate('http_failures_rate');
 
     export const options = {
-      //tags: {
-      //  testid: 'test-demo-2',
-      //},
+      tags: {
+        testid: 'test-demo-2',
+      },
       scenarios: {
         // 성공 시나리오: 정상 페이지 요청
         success_flow: {

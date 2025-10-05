@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: k6-loadtest2
+  name: k6-loadtest3
   namespace: load-test
   labels:
     app.kubernetes.io/name: load-test-job
@@ -10,16 +10,11 @@ spec:
   backoffLimit: 0
   selector:
     matchLabels:
-      job-name: k6-loadtest2  # ← 추가
-  volumes:
-  - configMap:
-      defaultMode: 420
-      name: k6-script-for-test2
-      name: k6-test-volume
+      job-name: k6-loadtest3
   template:
     metadata:
       labels:
-        job-name: k6-loadtest2
+        job-name: k6-loadtest3
     spec:
       serviceAccountName: k6-runner
       nodeSelector:
@@ -32,7 +27,7 @@ spec:
       volumes:
       - configMap:
           defaultMode: 420
-          name: k6-script-for-test-2
+          name: k6-script-for-test-3
         name: k6-test-volume
       containers:
       - name: k6
@@ -41,8 +36,7 @@ spec:
         args:
           - "run"
           - "--out"
-          - "experimental-prometheus-rw=http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write"
-          - "/test/script.js"
+          - "experimental-prometheus-rw=http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write"          - "/test/script.js"
         ports:
         - containerPort: 6565
         volumeMounts:
@@ -56,12 +50,8 @@ spec:
           value: http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write
         - name: K6_PROMETHEUS_RW_TREND_STATS
           value: "p(90),p(95),p(99),max"
-        # - name: K6_PROMETHEUS_RW_STALE_MARKERS
-        #   value: "true"
         - name: K6_PROMETHEUS_RW_TAGS
           value: "testid,tags,scenario,url,method,status"
-        - name: K6_TAGS
-          value: '{"testid":"test-demo-2"}'
         - name: K6_PROMETHEUS_RW_PUSH_INTERVAL
           value: "15s"
       - name: aws-sigv4-proxy
