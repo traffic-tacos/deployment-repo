@@ -87,12 +87,6 @@ spec:
           value: "true"
         - name: REDIS_TLS_INSECURE_SKIP_VERIFY
           value: "true"
-        - name: JWT_JWKS_ENDPOINT
-          value: https://www.googleapis.com/oauth2/v3/certs
-        - name: JWT_ISSUER
-          value: https://accounts.google.com
-        - name: JWT_AUDIENCE
-          value: gateway-api
         - name: BACKEND_RESERVATION_API_ADDRESS
           value: reservation-api:8010
         - name: BACKEND_INVENTORY_API_ADDRESS
