@@ -11,25 +11,34 @@ data:
     import http from 'k6/http';
     import { check, sleep } from 'k6';
     import { Rate, Counter } from 'k6/metrics';
-    import { uuidv4 } from 'https://jslib.k6.io/k6-utils/1.4.0/index.js';
 
     // Custom Metric
     const queueJoinFailRate = new Rate('queue_join_fail_rate');
     const queueStatusFailRate = new Rate('queue_status_fail_rate');
     const queueEnterFailRate = new Rate('queue_enter_fail_rate');
+    const reservationFailRate = new Rate('reservation_fail_rate');
+    const paymentFailRate = new Rate('payment_fail_rate');
+    const completedFlows = new Counter('completed_flows');
+
+    function uuidv4() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
 
     export const options = {
         scenarios: {
           full_success_flow: {
               executor: 'ramping-arrival-rate',
-              startRate: 10,
+              startRate: 0,
               timeUnit: '1s',
-              preAllocatedVUs: 50,
-              maxVUs: 100,
+              preAllocatedVUs: 0,
+              maxVUs: 500, //50000
               stages: [
-                  { duration: '2m', target: 100 },
-                  { duration: '5m', target: 100 },
-                  { duration: '2m', target: 0 },
+                  { duration: '5m', target: 100 }, //10000
+                  { duration: '5m', target: 0 },
               ],
               exec: 'fullSuccessScenario'
           }
@@ -46,12 +55,8 @@ data:
     const BASE_URL = __ENV.TARGET_BASE_URL;
     const API_PREFIX = '/api/v1';
 
-    const headers = {
-        headers: {
-            ...headers,
-            'Idempotency-Key': uuidv4(),
-            'Content-Type' : 'application/json'
-        }
+    const baseHeaders = {
+        'Content-Type': 'application/json'
     };
 
     // 공통 함수: 대기열 진입 /queue/join
@@ -65,16 +70,23 @@ data:
                 user_id: userId,
                 event_id: eventId,
             }),
-            { headers }
+            {
+                headers: {
+                    ...baseHeaders,
+                    'Idempotency-Key': uuidv4(),
+                },
+                timeout: '300s'
+            }
         );
         
-        console.log(joinRes.status);
-        console.log(joinRes.json('waiting_token'));
-
+        console.log("join start")
         const success = check(joinRes, {
             'queue join status 202': (r) => r.status === 202,
             'queue join has token': (r) => r.json('waiting_token') !== undefined,
         });
+        
+        console.log("join end")
+
         queueJoinFailRate.add(!success);
         
         return success ? { waiting_token: joinRes.json('waiting_token'), userId, eventId } : null;
@@ -89,17 +101,17 @@ data:
                 `${BASE_URL}${API_PREFIX}/queue/status?token=${waiting_token}`
             );
                 
-            if (statusRes.status === 200 && statusRes.json('status') === ready) {
+            if (statusRes.status === 200 && statusRes.json('status') === "ready") {
                 return true;
             }
             else if(statusRes.status != 200)
             {
                 console.log("statusRes.status");
                 console.log(statusRes.status);
-                queueStatusFailRate.add(!success);
+                queueStatusFailRate.add(false);
             }
         }
-        queueStatusFailRate.add(!success);
+        queueStatusFailRate.add(false);
         return false;
     }
 
@@ -108,7 +120,12 @@ data:
         const enterRes = http.post(
             `${BASE_URL}${API_PREFIX}/queue/enter`,
             JSON.stringify({ waiting_token }),
-            { headers }
+            {
+                headers: {
+                    ...baseHeaders,
+                    'Idempotency-Key': uuidv4(),
+                }
+            }
         );
         
         const success = check(enterRes, {
@@ -123,8 +140,8 @@ data:
     // 공통 함수: 예약 생성 /reservations
     function createReservation(accessToken, eventId) {
         const authHeaders = {
-        ...headers,
-        'Authorization': `Bearer ${accessToken}`,
+            ...baseHeaders,
+            'Authorization': `Bearer ${accessToken}`,
         };
         
         const reserveRes = http.post(
@@ -136,13 +153,13 @@ data:
             "A-" + Math.floor(Math.random() * 1000) + 1,
             ],
             "quantity": 2
-        }),
-        { 
-            headers: {
-            ...authHeaders,
-            'Idempotency-Key': uuidv4(),
+            }),
+            { 
+                headers: {
+                    ...authHeaders,
+                    'Idempotency-Key': uuidv4(),
+                }
             }
-        }
         );
         
         const success = check(reserveRes, {
@@ -157,8 +174,8 @@ data:
     // 공통 함수: 결제 /payment/intent
     function createPayment(accessToken, reservation) {
         const authHeaders = {
-        ...headers,
-        'Authorization': `Bearer ${accessToken}`,
+            ...baseHeaders,
+            'Authorization': `Bearer ${accessToken}`,
         };
         
         const intentRes = http.post(
@@ -171,29 +188,29 @@ data:
             }),
             { 
                 headers: {
-                ...reservation.authHeaders,
-                'Idempotency-Key': uuidv4(),
+                    ...reservation.authHeaders,
+                    'Idempotency-Key': uuidv4(),
                 }
             }
-        );
+        ); 
         
         const success = check(intentRes, {
-            'paytment created': (r) => r.status === 201 || r.status === 200,
-            'paytment has id': (r) => r.json('paytment_id') !== undefined,
+            'payment created': (r) => r.status === 201 || r.status === 200,
+            'payment has id': (r) => r.json('payment_id') !== undefined,
         });
         paymentFailRate.add(!success);
         
-        return success ? { paymentId: reserveRes.json('paytment_id'), authHeaders } : null;
+        return success ? { paymentId: reserveRes.json('payment_id'), authHeaders } : null;
     }
 
     export function fullSuccessScenario() {
         const queueData = joinQueue();
         if (!queueData) return;
         
-        const ready = pollQueueStatus(queueData.token, 15);
+        const ready = pollQueueStatus(queueData.waiting_token, 15);
         if (!ready) return;
         
-        const accessToken = enterSystem(queueData.token);
+        const accessToken = enterSystem(queueData.waiting_token);
         if (!accessToken) return;
         
         sleep(Math.random() * 2 + 1);
@@ -204,7 +221,12 @@ data:
         http.post(
             `${BASE_URL}${API_PREFIX}/reservations/${reservation.reservationId}/confirm`,
             null,
-            { headers }
+            {
+                headers: {
+                    ...baseHeaders,
+                    'Idempotency-Key': uuidv4(),
+                }
+            }
         );
         
         // 결제 intent 생성
@@ -220,7 +242,12 @@ data:
                 payment_id: paymentId,
                 payment_method: 'card',
             }),
-            { headers }
+            {
+                headers: {
+                    ...baseHeaders,
+                    'Idempotency-Key': uuidv4(),
+                }
+            }
         );
         
         const paymentSuccess = check(paymentRes, {
@@ -233,14 +260,16 @@ data:
             sleep(1);
             http.get(
                 `${BASE_URL}${API_PREFIX}/payment/${paymentId}/status`,
-                { headers: reservation.authHeaders }
+                { headers: reservation.authHeaders,
+                'Idempotency-Key': uuidv4() }
             );
             
             // 최종 예약 확인
             sleep(0.5);
             http.get(
                 `${BASE_URL}${API_PREFIX}/reservations/${reservation.reservationId}`,
-                { headers: reservation.authHeaders }
+                { headers: reservation.authHeaders,
+                'Idempotency-Key': uuidv4() }
             );
             
             completedFlows.add(1);
