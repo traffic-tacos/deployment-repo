@@ -108,7 +108,7 @@ spec:
         - name: AWS_ROLE_ARN
           value: arn:aws:iam::137406935518:role/traffic-tacos-gateway-api-sa-role
         - name: AWS_WEB_IDENTITY_TOKEN_FILE
-          value: /var/run/secrets/kubernetes.io/serviceaccount/token
+          value: /var/run/secrets/eks.amazonaws.com/serviceaccount/token
         - name: REDIS_POOL_SIZE
           value: "50"
         - name: REDIS_POOL_TIMEOUT
@@ -172,3 +172,18 @@ spec:
           timeoutSeconds: 2
           successThreshold: 1
           failureThreshold: 2
+        
+        volumeMounts:
+        - name: aws-iam-token
+          mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
+          readOnly: true
+      
+      volumes:
+      - name: aws-iam-token
+        projected:
+          defaultMode: 420
+          sources:
+          - serviceAccountToken:
+              audience: sts.amazonaws.com
+              expirationSeconds: 86400
+              path: token
