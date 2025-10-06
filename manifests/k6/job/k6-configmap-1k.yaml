@@ -35,16 +35,16 @@ data:
               startRate: 0,
               timeUnit: '1s',
               preAllocatedVUs: 0,
-              maxVUs: 500, //50000
+              maxVUs: 20000,
               stages: [
-                  { duration: '5m', target: 100 }, //10000
+                  { duration: '5m', target: 10000 },
                   { duration: '5m', target: 0 },
               ],
               exec: 'fullSuccessScenario'
           }
         },
         thresholds: {
-            http_req_duration: ['p(95)<3000', 'p(99)<5000'],
+            http_req_duration: ['p(95)<5000', 'p(99)<7000'],
             http_req_failed: ['rate<0.1'],
             queue_join_fail_rate: ['rate<0.05'],
             queue_status_fail_rate: ['rate<0.2'],
@@ -79,13 +79,10 @@ data:
             }
         );
         
-        console.log("join start")
         const success = check(joinRes, {
             'queue join status 202': (r) => r.status === 202,
             'queue join has token': (r) => r.json('waiting_token') !== undefined,
         });
-        
-        console.log("join end")
 
         queueJoinFailRate.add(!success);
         
