@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: k6-loadtest-prod
+  name: k6-loadtest-rps
   namespace: load-test
   labels:
     app.kubernetes.io/name: load-test-job
@@ -10,11 +10,11 @@ spec:
   backoffLimit: 0
   selector:
     matchLabels:
-      job-name: k6-loadtest-prod
+      job-name: k6-loadtest-rps
   template:
     metadata:
       labels:
-        job-name: k6-loadtest-prod
+        job-name: k6-loadtest-rps
     spec:
       serviceAccountName: k6-runner
       nodeSelector:
@@ -27,17 +27,17 @@ spec:
       volumes:
       - configMap:
           defaultMode: 420
-          name: k6-script-prod
+          name: k6-script-for-rps
         name: k6-test-volume
       containers:
       - name: k6
         image: grafana/k6:latest
         command: ["k6"]
         args:
-        - "run"
-        - "--out"
-        - "experimental-prometheus-rw=http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write"
-        - "/test/script.js"
+          - "run"
+          - "--out"
+          - "experimental-prometheus-rw=http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write"
+          - "/test/script.js"
         ports:
         - containerPort: 6565
         volumeMounts:
@@ -45,8 +45,6 @@ spec:
           name: k6-test-volume
           readOnly: true
         env:
-        - name: TARGET_BASE_URL
-          value: 'https://api.traffictacos.store'
         - name: K6_OUT
           value: experimental-prometheus-rw
         - name: K6_PROMETHEUS_RW_SERVER_URL
