@@ -34,10 +34,10 @@ spec:
         image: grafana/k6:latest
         command: ["k6"]
         args:
-          - "run"
-          - "--out"
-          - "experimental-prometheus-rw=http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write"
-          - "/test/script.js"
+        - "run"
+        - "--out"
+        - "experimental-prometheus-rw=http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write"
+        - "/test/script.js"
         ports:
         - containerPort: 6565
         volumeMounts:

@@ -32,8 +32,7 @@ spec:
       containers:
       - name: k6
         image: grafana/k6:latest
-        command:
-        - k6"
+        command: ["k6"]
         args:
         - "run"
         - "--out"
