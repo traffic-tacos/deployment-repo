@@ -10,7 +10,7 @@ spec:
   backoffLimit: 0
   selector:
     matchLabels:
-      job-name: k6-loadtest
+      job-name: k6-loadtest-small
   template:
     metadata:
       labels:
