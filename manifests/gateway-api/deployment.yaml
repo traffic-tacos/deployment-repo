@@ -129,6 +129,8 @@ spec:
           value: "grpc"
         - name: OTEL_EXPORTER_OTLP_INSECURE
           value: "true"
+        - name: CORS_ALLOW_ORIGINS
+          value: "https://www.traffictacos.store,https://traffictacos.store,https://api.traffictacos.store"
 
         resources:
           requests:
