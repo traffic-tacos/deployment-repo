@@ -11,7 +11,6 @@ metadata:
     app.kubernetes.io/part-of: traffic-tacos
 spec:
   replicas: 3
-  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app: gateway-api
@@ -62,116 +61,116 @@ spec:
         - name: gateway-api
           image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-gateway-api:d55b2d5
           imagePullPolicy: Always
-          
-          ports:
-          - name: http
-            containerPort: 8000
-            protocol: TCP
-          - name: grpc
-            containerPort: 8001
-            protocol: TCP
-          
-          env:
-          - name: SERVER_PORT
-            value: "8000"
-          - name: GRPC_PORT
-            value: "8001"
-          - name: REDIS_ADDRESS
-            value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
-          - name: REDIS_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: redis-password
-                key: password
-                optional: true
-          - name: REDIS_TLS_ENABLED
-            value: "true"
-          - name: REDIS_TLS_INSECURE_SKIP_VERIFY
-            value: "true"
-          - name: BACKEND_RESERVATION_API_ADDRESS
-            value: reservation-api:8010
-          - name: BACKEND_INVENTORY_API_ADDRESS
-            value: inventory-api:8020
-          - name: BACKEND_PAYMENT_API_ADDRESS
-            value: payment-sim-api:8030
-          - name: AWS_STS_REGIONAL_ENDPOINTS
-            value: regional
-          - name: AWS_DEFAULT_REGION
-            value: ap-northeast-2
-          - name: AWS_REGION
-            value: ap-northeast-2
-          - name: AWS_ROLE_ARN
-            value: arn:aws:iam::137406935518:role/traffic-tacos-gateway-api-sa-role
-          - name: AWS_WEB_IDENTITY_TOKEN_FILE
-            value: /var/run/secrets/eks.amazonaws.com/serviceaccount/token
-          - name: REDIS_POOL_SIZE
-            value: "50"
-          - name: REDIS_POOL_TIMEOUT
-            value: "3s"
-          - name: HTTP_MAX_IDLE_CONNS
-            value: "100"
-          - name: HTTP_MAX_IDLE_CONNS_PER_HOST
-            value: "50"
-          - name: HTTP_CLIENT_TIMEOUT
-            value: "5s"
-          - name: RATE_LIMIT_RPS
-            value: "1500"
-          - name: RATE_LIMIT_BURST
-            value: "2000"
-          - name: OTEL_EXPORTER_OTLP_ENDPOINT
-            value: "otel-collector-collector.otel-collector:4317"
-          - name: OTEL_EXPORTER_OTLP_PROTOCOL
-            value: "grpc"
-          - name: OTEL_EXPORTER_OTLP_INSECURE
-            value: "true"
-          - name: CORS_ALLOW_ORIGINS
-            value: "https://www.traffictacos.store,https://traffictacos.store,https://api.traffictacos.store"
-          
-          # DynamoDB Users Table Configuration
-          - name: DYNAMODB_USERS_TABLE_NAME
-            value: "ticket-users"
-          - name: DYNAMODB_REGION
-            value: "ap-northeast-2"
-          
-          # JWT Configuration for Self-issued Tokens
-          - name: JWT_SECRET
-            valueFrom:
-              secretKeyRef:
-                name: gateway-api-secrets
-                key: jwt-secret
-                optional: false
-          
-          resources:
-            requests:
-              cpu: 800m
-              memory: 256Mi
-            limits:
-              cpu: 1200m
-              memory: 512Mi
-          
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 8000
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 3
-          
-          readinessProbe:
-            httpGet:
-              path: /readyz
-              port: 8000
-            initialDelaySeconds: 5
-            periodSeconds: 3
-            timeoutSeconds: 2
-            successThreshold: 1
-            failureThreshold: 2
-          
-          volumeMounts:
-          - name: aws-iam-token
-            mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
-            readOnly: true
+        
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        - name: grpc
+          containerPort: 8001
+          protocol: TCP
+        
+        env:
+        - name: SERVER_PORT
+          value: "8000"
+        - name: GRPC_PORT
+          value: "8001"
+        - name: REDIS_ADDRESS
+          value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-password
+              key: password
+              optional: true
+        - name: REDIS_TLS_ENABLED
+          value: "true"
+        - name: REDIS_TLS_INSECURE_SKIP_VERIFY
+          value: "true"
+        - name: BACKEND_RESERVATION_API_ADDRESS
+          value: reservation-api:8011
+        - name: BACKEND_INVENTORY_API_ADDRESS
+          value: inventory-api:8021
+        - name: BACKEND_PAYMENT_API_ADDRESS
+          value: payment-sim-api:8031
+        - name: AWS_STS_REGIONAL_ENDPOINTS
+          value: regional
+        - name: AWS_DEFAULT_REGION
+          value: ap-northeast-2
+        - name: AWS_REGION
+          value: ap-northeast-2
+        - name: AWS_ROLE_ARN
+          value: arn:aws:iam::137406935518:role/traffic-tacos-gateway-api-sa-role
+        - name: AWS_WEB_IDENTITY_TOKEN_FILE
+          value: /var/run/secrets/eks.amazonaws.com/serviceaccount/token
+        - name: REDIS_POOL_SIZE
+          value: "50"
+        - name: REDIS_POOL_TIMEOUT
+          value: "3s"
+        - name: HTTP_MAX_IDLE_CONNS
+          value: "100"
+        - name: HTTP_MAX_IDLE_CONNS_PER_HOST
+          value: "50"
+        - name: HTTP_CLIENT_TIMEOUT
+          value: "5s"
+        - name: RATE_LIMIT_RPS
+          value: "1500"
+        - name: RATE_LIMIT_BURST
+          value: "2000"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "otel-collector-collector.otel-collector:4317"
+        - name: OTEL_EXPORTER_OTLP_PROTOCOL
+          value: "grpc"
+        - name: OTEL_EXPORTER_OTLP_INSECURE
+          value: "true"
+        - name: CORS_ALLOW_ORIGINS
+          value: "https://www.traffictacos.store,https://traffictacos.store,https://api.traffictacos.store"
+        
+        # DynamoDB Users Table Configuration
+        - name: DYNAMODB_USERS_TABLE_NAME
+          value: "ticket-users"
+        - name: DYNAMODB_REGION
+          value: "ap-northeast-2"
+        
+        # JWT Configuration for Self-issued Tokens
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: gateway-api-secrets
+              key: jwt-secret
+              optional: false
+        
+        resources:
+          requests:
+            cpu: 800m
+            memory: 256Mi
+          limits:
+            cpu: 1200m
+            memory: 512Mi
+        
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 3
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 2
+        
+        volumeMounts:
+        - name: aws-iam-token
+          mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
+          readOnly: true
       
       volumes:
       - name: aws-iam-token
