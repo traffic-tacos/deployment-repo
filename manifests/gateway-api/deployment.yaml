@@ -88,11 +88,9 @@ spec:
             value: "true"
           - name: REDIS_TLS_INSECURE_SKIP_VERIFY
             value: "true"
-          - name: BACKEND_RESERVATION_API_ADDRESS
+          - name: BACKEND_RESERVATION_API_GRPC_ADDRESS
             value: reservation-api:8011
-          - name: BACKEND_INVENTORY_API_ADDRESS
-            value: inventory-api:8021
-          - name: BACKEND_PAYMENT_API_ADDRESS
+          - name: BACKEND_PAYMENT_API_GRPC_ADDRESS
             value: payment-sim-api:8031
           - name: AWS_STS_REGIONAL_ENDPOINTS
             value: regional
