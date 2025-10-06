@@ -59,7 +59,7 @@ spec:
       
       containers:
       - name: gateway-api
-        image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-gateway-api:7689594
+        image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-gateway-api:c1c19ae
         imagePullPolicy: Always
         
         ports:
@@ -129,6 +129,8 @@ spec:
           value: "grpc"
         - name: OTEL_EXPORTER_OTLP_INSECURE
           value: "true"
+        - name: CORS_ALLOW_ORIGINS
+          value: "https://www.traffictacos.store,https://traffictacos.store,https://api.traffictacos.store"
 
         resources:
           requests:
