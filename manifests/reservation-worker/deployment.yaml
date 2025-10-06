@@ -11,6 +11,7 @@ metadata:
     app.kubernetes.io/part-of: traffic-tacos
 spec:
   # replicas: 1  # KEDA ScaledObject가 관리하므로 비활성화
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app: reservation-worker

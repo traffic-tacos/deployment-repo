@@ -11,6 +11,7 @@ metadata:
     app.kubernetes.io/part-of: traffic-tacos
 spec:
   replicas: 3
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app: gateway-api
