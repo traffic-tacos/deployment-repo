@@ -108,7 +108,7 @@ spec:
         - name: AWS_ROLE_ARN
           value: arn:aws:iam::137406935518:role/traffic-tacos-gateway-api-sa-role
         - name: AWS_WEB_IDENTITY_TOKEN_FILE
-          value: /var/run/secrets/eks.amazonaws.com/serviceaccount/token
+          value: /var/run/secrets/kubernetes.io/serviceaccount/token
         - name: REDIS_POOL_SIZE
           value: "50"
         - name: REDIS_POOL_TIMEOUT
@@ -131,7 +131,21 @@ spec:
           value: "true"
         - name: CORS_ALLOW_ORIGINS
           value: "https://www.traffictacos.store,https://traffictacos.store,https://api.traffictacos.store"
-
+        
+        # DynamoDB Users Table Configuration
+        - name: DYNAMODB_USERS_TABLE_NAME
+          value: "ticket-users"
+        - name: DYNAMODB_REGION
+          value: "ap-northeast-2"
+        
+        # JWT Configuration for Self-issued Tokens
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: gateway-api-secrets
+              key: jwt-secret
+              optional: false
+        
         resources:
           requests:
             cpu: 800m
