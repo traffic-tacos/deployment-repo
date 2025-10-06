@@ -70,18 +70,51 @@ spec:
           protocol: TCP
         
         env:
+        # Spring Configuration
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
         - name: SERVER_PORT
           value: "8010"
         - name: GRPC_PORT
           value: "8011"
+        
+        # Redis Configuration
         - name: REDIS_ADDRESS
           value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
         - name: REDIS_TLS_ENABLED
           value: "true"
         - name: REDIS_TLS_INSECURE_SKIP_VERIFY
           value: "true"
-        - name: INVENTORY_GRPC_ADDR
-          value: inventory-api:8020
+        
+        # gRPC Client Configuration (Fixed: correct variable name and port)
+        - name: GRPC_INVENTORY_ADDRESS
+          value: "static://inventory-api.tacos-app.svc.cluster.local:8021"
+        
+        # AWS Configuration
+        - name: AWS_REGION
+          value: "ap-northeast-2"
+        
+        # DynamoDB Tables
+        - name: DYNAMODB_TABLE_RESERVATIONS
+          value: "ticket-reservation-reservations"
+        - name: DYNAMODB_TABLE_ORDERS
+          value: "ticket-reservation-orders"
+        - name: DYNAMODB_TABLE_IDEMPOTENCY
+          value: "ticket-reservation-idempotency"
+        - name: DYNAMODB_TABLE_OUTBOX
+          value: "ticket-reservation-outbox"
+        
+        # EventBridge Configuration
+        - name: EVENTBRIDGE_BUS_NAME
+          value: "ticket-reservation-events"
+        - name: EVENTBRIDGE_SCHEDULER_GROUP
+          value: "reservation-expiry"
+        
+        # JWT Configuration
+        - name: JWT_ISSUER_URI
+          value: "https://api.traffictacos.store"
+        
+        # Observability
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: "http://otel-collector-collector.otel-collector:4318"
         - name: OTEL_EXPORTER_OTLP_PROTOCOL
