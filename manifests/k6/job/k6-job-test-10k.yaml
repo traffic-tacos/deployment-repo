@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: k6-loadtest-small
+  name: k6-loadtest-10k
   namespace: load-test
   labels:
     app.kubernetes.io/name: load-test-job
@@ -27,7 +27,7 @@ metadata:
       - name: k6-test-volume
         configMap:
           defaultMode: 420
-          name: k6-script-small
+          name: k6-script-10k
     containers:
       - name: k6
         image: grafana/k6:latest
