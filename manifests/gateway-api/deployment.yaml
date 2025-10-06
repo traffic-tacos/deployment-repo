@@ -62,16 +62,16 @@ spec:
         - name: gateway-api
           image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-gateway-api:80bb506
           imagePullPolicy: Always
-        
-        ports:
-        - name: http
-          containerPort: 8000
-          protocol: TCP
-        - name: grpc
-          containerPort: 8001
-          protocol: TCP
-        
-        env:
+          
+          ports:
+          - name: http
+            containerPort: 8000
+            protocol: TCP
+          - name: grpc
+            containerPort: 8001
+            protocol: TCP
+          
+          env:
         - name: SERVER_PORT
           value: "8000"
         - name: GRPC_PORT
