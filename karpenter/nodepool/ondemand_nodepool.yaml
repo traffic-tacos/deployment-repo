@@ -11,7 +11,7 @@ spec:
     budgets:
     - nodes: 20%
     consolidateAfter: 5m
-    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidationPolicy: WhenEmpty
   limits:
     cpu: "300"
     memory: 800Gi
@@ -44,6 +44,8 @@ spec:
         values:
         - t3a
         - t3
+        - m6i
+        - m7i
       - key: karpenter.k8s.aws/instance-size
         operator: In
         values:
