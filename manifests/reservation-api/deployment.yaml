@@ -80,7 +80,7 @@ spec:
         
         # Redis Configuration
         - name: REDIS_ADDRESS
-          value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
+          value: clustercfg.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
         - name: REDIS_TLS_ENABLED
           value: "true"
         - name: REDIS_TLS_INSECURE_SKIP_VERIFY

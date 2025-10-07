@@ -76,8 +76,9 @@ spec:
             value: "8000"
           - name: GRPC_PORT
             value: "8001"
+          # 🔴 Configuration Endpoint for Cluster Mode (replaces master endpoint)
           - name: REDIS_ADDRESS
-            value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
+            value: clustercfg.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
           - name: REDIS_PASSWORD
             valueFrom:
               secretKeyRef:
@@ -87,6 +88,16 @@ spec:
           - name: REDIS_TLS_ENABLED
             value: "true"
           - name: REDIS_TLS_INSECURE_SKIP_VERIFY
+            value: "true"
+          # 🔴 Enable Cluster Mode for Read Replica support
+          - name: REDIS_CLUSTER_MODE
+            value: "true"
+          # 🔴 Read Replica optimization (route reads to fastest replica)
+          - name: REDIS_ROUTE_BY_LATENCY
+            value: "true"
+          - name: REDIS_ROUTE_RANDOMLY
+            value: "false"
+          - name: REDIS_READ_ONLY
             value: "true"
           - name: BACKEND_RESERVATION_API_GRPC_ADDRESS
             value: reservation-api:8011
