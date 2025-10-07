@@ -22,7 +22,7 @@ spec:
     httpProtocolIPv6: disabled
     httpPutResponseHopLimit: 2
     httpTokens: optional
-  role: ticket-cluster-eks-worker-role
+  role: ticket-cluster-karpenter-controller
   securityGroupSelectorTerms:
   - tags:
       karpenter.sh/discovery: ticket-cluster
