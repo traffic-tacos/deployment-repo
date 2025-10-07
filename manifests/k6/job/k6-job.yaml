@@ -1,22 +1,21 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: k6-loadtest
+  name: k6-loadtest-prod
   namespace: load-test
   labels:
     app: k6
 spec:
-  replicas: 10 # -> 10 -> 30 추후 변경
-  selector:
-    matchLabels:
-      app: k6
-      version: 10k
+  ttlSecondsAfterFinished: 3600  # 1시간 후 자동 삭제
+  backoffLimit: 0  # 실패 시 재시도 안함
+  parallelism: 10 #30
+  #completions: 2
   template:
     metadata:
       labels:
         app: k6
-        version: 10k
     spec:
+      restartPolicy: Never
       serviceAccountName: k6-runner
       nodeSelector:
         workload-type: loadtest
@@ -37,7 +36,7 @@ spec:
         - name: k6-test-volume
           configMap:
             defaultMode: 420
-            name: k6-cm
+            name: k6-cm-prod
       containers:
         - name: k6
           image: grafana/k6:latest
@@ -45,13 +44,17 @@ spec:
           args:
             - "run"
             - "/test/script.js"
-          ports:
-            - containerPort: 6565
           volumeMounts:
             - mountPath: /test
               name: k6-test-volume
               readOnly: true
           env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: TEST_ID
+              value: "k6-prod-1"
             - name: TARGET_BASE_URL
               value: "https://api.traffictacos.store"
             - name: K6_OUT
@@ -61,7 +64,7 @@ spec:
             - name: K6_PROMETHEUS_RW_TREND_STATS
               value: "p(90),p(95),p(99),max,min,avg,med"
             - name: K6_PROMETHEUS_RW_TAGS
-              value: "testid,tags,scenario,url,method,status"
+              value: "testid,tags,scenario,method,status,expected_response,pod"
             - name: K6_PROMETHEUS_RW_PUSH_INTERVAL
               value: "15s"
           resources:
