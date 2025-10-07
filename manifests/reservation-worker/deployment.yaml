@@ -74,7 +74,7 @@ spec:
         - name: REDIS_ADDRESS
           value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
         - name: SQS_QUEUE_URL
-          value: https://sqs.ap-northeast-2.amazonaws.com/137406935518/reservation-queue
+          value: https://sqs.ap-northeast-2.amazonaws.com/137406935518/traffic-tacos-reservation-events
         - name: INVENTORY_GRPC_ADDR
           value: inventory-api:8020
         - name: RESERVATION_API_BASE
