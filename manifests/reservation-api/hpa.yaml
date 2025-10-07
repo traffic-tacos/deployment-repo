@@ -10,7 +10,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: reservation-api
-  minReplicas: 3
+  minReplicas: 5
   maxReplicas: 50
   metrics:
   - type: Resource
@@ -18,13 +18,13 @@ spec:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 65
+        averageUtilization: 50
   - type: Resource
     resource:
       name: memory
-      target:
+      target:s
         type: Utilization
-        averageUtilization: 70
+        averageUtilization: 60
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 300
@@ -38,8 +38,8 @@ spec:
       policies:
       - type: Percent
         value: 100
-        periodSeconds: 20
+        periodSeconds: 10
       - type: Pods
         value: 8
-        periodSeconds: 20
+        periodSeconds: 10
       selectPolicy: Max
