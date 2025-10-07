@@ -11,7 +11,7 @@ spec:
     budgets:
     - nodes: 20%
     consolidateAfter: 5m
-    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidationPolicy: WhenEmpty
   limits:
     cpu: "300"
     memory: 800Gi

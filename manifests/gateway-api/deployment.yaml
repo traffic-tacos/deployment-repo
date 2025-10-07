@@ -96,6 +96,15 @@ spec:
             value: "false"
           - name: REDIS_READ_ONLY
             value: "true"
+          # 🔴 Redis connection pool optimization for 30k RPS
+          - name: REDIS_POOL_SIZE
+            value: "1000"
+          - name: REDIS_POOL_TIMEOUT
+            value: "10s"
+          - name: REDIS_MIN_IDLE_CONNS
+            value: "100"
+          - name: REDIS_MAX_CONN_AGE
+            value: "30m"
           - name: BACKEND_RESERVATION_API_GRPC_ADDRESS
             value: reservation-api:8011
           - name: BACKEND_PAYMENT_API_GRPC_ADDRESS
@@ -152,11 +161,11 @@ spec:
           
           resources:
             requests:
-              cpu: 800m
-              memory: 256Mi
-            limits:
               cpu: 1200m
               memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 1Gi
           
           livenessProbe:
             httpGet:
