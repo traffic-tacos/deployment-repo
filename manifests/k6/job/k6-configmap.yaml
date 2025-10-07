@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: k6-script-10k
+  name: k6-cm
   namespace: load-test
   labels:
     app.kubernetes.io/name: load-test-cm
@@ -35,12 +35,12 @@ data:
               startRate: 0,
               timeUnit: '1s',
               preAllocatedVUs: 0,
-              maxVUs: 20000,
+              maxVUs: 2000,
               stages: [
-                  { duration: '5m', target: 10000 },
+                  { duration: '5m', target: 1000 },
                   { duration: '5m', target: 0 },
               ],
-              exec: 'fullSuccessScenario'
+              exec: 'fullScenario'
           }
         },
         thresholds: {
@@ -200,7 +200,7 @@ data:
         return success ? { paymentId: reserveRes.json('payment_id'), authHeaders } : null;
     }
 
-    export function fullSuccessScenario() {
+    export function fullScenario() {
         const queueData = joinQueue();
         if (!queueData) return;
         

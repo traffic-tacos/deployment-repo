@@ -1,20 +1,21 @@
-apiVersion: batch/v1
-kind: Job
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: k6-loadtest-10k
+  name: k6-loadtest
   namespace: load-test
   labels:
-    app.kubernetes.io/name: load-test-job
-    app.kubernetes.io/component: load-test
+    app: k6
 spec:
-  backoffLimit: 0
+  replicas: 1 # -> 10 -> 30 추후 변경
   selector:
     matchLabels:
-      job-name: k6-loadtest-10k
+      app: k6
+      version: 10k
   template:
     metadata:
       labels:
-        job-name: k6-loadtest-10k
+        app: k6
+        version: 10k
     spec:
       serviceAccountName: k6-runner
       nodeSelector:
@@ -36,7 +37,7 @@ spec:
         - name: k6-test-volume
           configMap:
             defaultMode: 420
-            name: k6-script-10k
+            name: k6-cm
       containers:
         - name: k6
           image: grafana/k6:latest
@@ -63,6 +64,10 @@ spec:
               value: "testid,tags,scenario,url,method,status"
             - name: K6_PROMETHEUS_RW_PUSH_INTERVAL
               value: "15s"
+          resources:
+            requests:
+              cpu: "1"
+              memory: "2Gi"
         - name: aws-sigv4-proxy
           image: public.ecr.aws/aws-observability/aws-sigv4-proxy:latest
           args:
@@ -76,4 +81,7 @@ spec:
             readOnly: true
           ports:
             - containerPort: 8005
-      restartPolicy: Never
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
