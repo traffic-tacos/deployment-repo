@@ -3,8 +3,6 @@ kind: Application
 metadata:
   name: k6-operator
   namespace: argocd
-  labels:
-    app: loadtest
   annotations:
     argocd.argoproj.io/sync-wave: "50"
 spec:

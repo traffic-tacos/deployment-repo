@@ -2,6 +2,8 @@ apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
   name: inject-aws-sigv4-proxy
+  labels:
+    app: k6-operator
 spec:
   rules:
     - name: add-sigv4-sidecar

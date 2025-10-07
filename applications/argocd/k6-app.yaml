@@ -4,7 +4,7 @@ metadata:
   name: k6-app
   namespace: argocd
   labels:
-    app.kubernetes.io/name: k6-job
+    app: k6-operator
   annotations:
     argocd.argoproj.io/sync-wave: "60"
   finalizers:
@@ -15,7 +15,7 @@ spec:
   source:
     repoURL: https://github.com/traffic-tacos/deployment-repo
     targetRevision: main
-    path: manifests/k6-operator
+    path: manifests/k6/k6-operator
   
   destination:
     server: https://kubernetes.default.svc

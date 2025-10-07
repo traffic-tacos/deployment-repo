@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: k6-cm-testrun
   namespace: load-test
+  labels:
+    app: k6-operator
 data:
   script.js: |
     import http from 'k6/http';
