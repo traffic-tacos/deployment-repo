@@ -122,10 +122,6 @@ spec:
             value: arn:aws:iam::137406935518:role/traffic-tacos-gateway-api-sa-role
           - name: AWS_WEB_IDENTITY_TOKEN_FILE
             value: /var/run/secrets/eks.amazonaws.com/serviceaccount/token
-          - name: REDIS_POOL_SIZE
-            value: "50"
-          - name: REDIS_POOL_TIMEOUT
-            value: "3s"
           - name: HTTP_MAX_IDLE_CONNS
             value: "100"
           - name: HTTP_MAX_IDLE_CONNS_PER_HOST
@@ -161,11 +157,11 @@ spec:
           
           resources:
             requests:
+              cpu: 800m
+              memory: 256Mi
+            limits:
               cpu: 1200m
               memory: 512Mi
-            limits:
-              cpu: 2000m
-              memory: 1Gi
           
           livenessProbe:
             httpGet:
