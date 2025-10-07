@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: k6-operator
   namespace: argocd
+  labels:
+    app: k6-operator
   annotations:
     argocd.argoproj.io/sync-wave: "50"
 spec:
@@ -21,7 +23,7 @@ spec:
   
   destination:
     server: https://kubernetes.default.svc
-    namespace: load-test
+    namespace: k6-operator
 
   syncPolicy:
     automated:
