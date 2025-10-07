@@ -5,6 +5,8 @@ metadata:
   namespace: argocd
   labels:
     app: loadtest
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
 spec:
   project: traffic-tacos
   sources:
