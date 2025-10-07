@@ -7,6 +7,10 @@ metadata:
     app: k6-operator
 spec:
   parallelism: 2
+  script:
+    configMap:
+      name: k6-cm-testrun
+      file: script.js
   runner:
     metadata:
       labels:
@@ -30,6 +34,7 @@ spec:
         value: "testid,tags,scenario,method,status,expected_response,pod"
       - name: K6_PROMETHEUS_RW_PUSH_INTERVAL
         value: "15s"
+    serviceAccountName: k6-runner
     nodeSelector:
       workload-type: loadtest
     tolerations:
@@ -37,30 +42,20 @@ spec:
         operator: Equal
         value: loadtest
         effect: NoSchedule
-    serviceAccountName: k6-runner
-    restartPolicy: Never
     resources:
       requests:
         cpu: "1"
         memory: "2Gi"
     volumeMounts:
-      - name: k6-test-volume
-        mountPath: /test
+      - name: aws-iam-token
+        mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
         readOnly: true
-    restartPolicy: Never
-  script:
-    configMap:
-      name: k6-cm-testrun
-      file: script.js
   volumes:
-  - name: k6-test-volume
-    configMap:
-      name: k6-cm-testrun
-  - name: aws-iam-token
-    projected:
-      defaultMode: 420
-      sources:
-        - serviceAccountToken:
-            audience: sts.amazonaws.com
-            expirationSeconds: 86400
-            path: token
+    - name: aws-iam-token
+      projected:
+        defaultMode: 420
+        sources:
+          - serviceAccountToken:
+              audience: sts.amazonaws.com
+              expirationSeconds: 86400
+              path: token
