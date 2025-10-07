@@ -1,12 +1,12 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: k6-job
+  name: k6-app
   namespace: argocd
   labels:
     app.kubernetes.io/name: k6-job
   annotations:
-    argocd.argoproj.io/sync-wave: "50"
+    argocd.argoproj.io/sync-wave: "60"
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:

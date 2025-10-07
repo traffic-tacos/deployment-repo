@@ -1,0 +1,65 @@
+apiVersion: k6.io/v1alpha1
+kind: TestRun
+metadata:
+  name: k6-loadtest-testrun
+  namespace: load-test
+  labels:
+    app: k6-operator
+spec:
+  parallelism: 2
+  script:
+    configMap:
+      name: k6-cm-testrun
+      file: script.js
+  volumes:
+  - name: k6-test-volume
+    configMap:
+      name: k6-cm-prod
+  - name: aws-iam-token
+    projected:
+      defaultMode: 420
+      sources:
+        - serviceAccountToken:
+            audience: sts.amazonaws.com
+            expirationSeconds: 86400
+            path: token
+  runner:
+    metadata:
+      labels:
+        app: k6-operator
+    env:
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+      - name: TEST_ID
+        value: "k6-testrun-1"
+      - name: TARGET_BASE_URL
+        value: "https://api.traffictacos.store"
+      - name: K6_OUT
+        value: experimental-prometheus-rw
+      - name: K6_PROMETHEUS_RW_SERVER_URL
+        value: http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write
+      - name: K6_PROMETHEUS_RW_TREND_STATS
+        value: "p(90),p(95),p(99),max,min,avg,med"
+      - name: K6_PROMETHEUS_RW_TAGS
+        value: "testid,tags,scenario,method,status,expected_response,pod"
+      - name: K6_PROMETHEUS_RW_PUSH_INTERVAL
+        value: "15s"
+    nodeSelector:
+      workload-type: loadtest
+    tolerations:
+      - key: workload
+        operator: Equal
+        value: loadtest
+        effect: NoSchedule
+    serviceAccountName: k6-runner
+    restartPolicy: Never
+    resources:
+      requests:
+        cpu: "1"
+        memory: "2Gi"
+    volumeMounts:
+      - name: k6-test-volume
+        mountPath: /test
+        readOnly: true
