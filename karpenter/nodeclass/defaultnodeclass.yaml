@@ -8,7 +8,7 @@ metadata:
 spec:
   amiFamily: AL2023
   amiSelectorTerms:
-  - name: amazon-eks-node-al2023-x86_64-standard-1.33-*
+  - id: ami-041625eac95e30c1c  # v1.33.4 (Working AMI) - v1.33.5 has node registration issues
   blockDeviceMappings:
   - deviceName: /dev/xvda
     ebs:
@@ -22,7 +22,7 @@ spec:
     httpProtocolIPv6: disabled
     httpPutResponseHopLimit: 2
     httpTokens: optional
-  role: ticket-cluster-karpenter-controller
+  role: ticket-cluster-eks-worker-role
   securityGroupSelectorTerms:
   - tags:
       karpenter.sh/discovery: ticket-cluster
