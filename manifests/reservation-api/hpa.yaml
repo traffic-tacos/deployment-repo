@@ -22,7 +22,7 @@ spec:
   - type: Resource
     resource:
       name: memory
-      target:s
+      target:
         type: Utilization
         averageUtilization: 60
   behavior:
