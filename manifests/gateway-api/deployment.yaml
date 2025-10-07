@@ -60,7 +60,7 @@ spec:
       
       containers:
         - name: gateway-api
-          image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-gateway-api:d55b2d5
+          image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-gateway-api:6a284e7
           imagePullPolicy: Always
           
           ports:
@@ -76,17 +76,25 @@ spec:
             value: "8000"
           - name: GRPC_PORT
             value: "8001"
+          # 🔴 Configuration Endpoint for Cluster Mode (replaces master endpoint)
           - name: REDIS_ADDRESS
-            value: master.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
-          - name: REDIS_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: redis-password
-                key: password
-                optional: true
+            value: clustercfg.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
+          # 🔴 Fetch password from AWS Secrets Manager (not K8s Secret)
+          - name: REDIS_PASSWORD_FROM_SECRETS
+            value: "true"
           - name: REDIS_TLS_ENABLED
             value: "true"
           - name: REDIS_TLS_INSECURE_SKIP_VERIFY
+            value: "true"
+          # 🔴 Enable Cluster Mode for Read Replica support
+          - name: REDIS_CLUSTER_MODE
+            value: "true"
+          # 🔴 Read Replica optimization (route reads to fastest replica)
+          - name: REDIS_ROUTE_BY_LATENCY
+            value: "true"
+          - name: REDIS_ROUTE_RANDOMLY
+            value: "false"
+          - name: REDIS_READ_ONLY
             value: "true"
           - name: BACKEND_RESERVATION_API_GRPC_ADDRESS
             value: reservation-api:8011
@@ -98,6 +106,9 @@ spec:
             value: ap-northeast-2
           - name: AWS_REGION
             value: ap-northeast-2
+          # 🔴 AWS Secrets Manager configuration
+          - name: AWS_SECRET_NAME
+            value: traffic-tacos/redis/auth-token
           - name: AWS_ROLE_ARN
             value: arn:aws:iam::137406935518:role/traffic-tacos-gateway-api-sa-role
           - name: AWS_WEB_IDENTITY_TOKEN_FILE

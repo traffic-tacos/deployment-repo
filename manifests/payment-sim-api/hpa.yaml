@@ -38,8 +38,8 @@ spec:
       policies:
       - type: Percent
         value: 100
-        periodSeconds: 20
+        periodSeconds: 10
       - type: Pods
         value: 5
-        periodSeconds: 20
+        periodSeconds: 10
       selectPolicy: Max
