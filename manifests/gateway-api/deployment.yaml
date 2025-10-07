@@ -79,12 +79,9 @@ spec:
           # 🔴 Configuration Endpoint for Cluster Mode (replaces master endpoint)
           - name: REDIS_ADDRESS
             value: clustercfg.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
-          - name: REDIS_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: redis-password
-                key: password
-                optional: true
+          # 🔴 Fetch password from AWS Secrets Manager (not K8s Secret)
+          - name: REDIS_PASSWORD_FROM_SECRETS
+            value: "true"
           - name: REDIS_TLS_ENABLED
             value: "true"
           - name: REDIS_TLS_INSECURE_SKIP_VERIFY
@@ -109,6 +106,9 @@ spec:
             value: ap-northeast-2
           - name: AWS_REGION
             value: ap-northeast-2
+          # 🔴 AWS Secrets Manager configuration
+          - name: AWS_SECRET_NAME
+            value: traffic-tacos/redis/auth-token
           - name: AWS_ROLE_ARN
             value: arn:aws:iam::137406935518:role/traffic-tacos-gateway-api-sa-role
           - name: AWS_WEB_IDENTITY_TOKEN_FILE
