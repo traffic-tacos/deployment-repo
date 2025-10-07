@@ -7,22 +7,6 @@ metadata:
     app: k6-operator
 spec:
   parallelism: 2
-  script:
-    configMap:
-      name: k6-cm-testrun
-      file: script.js
-  volumes:
-  - name: k6-test-volume
-    configMap:
-      name: k6-cm-prod
-  - name: aws-iam-token
-    projected:
-      defaultMode: 420
-      sources:
-        - serviceAccountToken:
-            audience: sts.amazonaws.com
-            expirationSeconds: 86400
-            path: token
   runner:
     metadata:
       labels:
@@ -63,3 +47,20 @@ spec:
       - name: k6-test-volume
         mountPath: /test
         readOnly: true
+    restartPolicy: Never
+  script:
+    configMap:
+      name: k6-cm-testrun
+      file: script.js
+  volumes:
+  - name: k6-test-volume
+    configMap:
+      name: k6-cm-testrun
+  - name: aws-iam-token
+    projected:
+      defaultMode: 420
+      sources:
+        - serviceAccountToken:
+            audience: sts.amazonaws.com
+            expirationSeconds: 86400
+            path: token
