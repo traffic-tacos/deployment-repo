@@ -129,9 +129,9 @@ spec:
           - name: HTTP_CLIENT_TIMEOUT
             value: "5s"
           - name: RATE_LIMIT_RPS
-            value: "1500"
+            value: "10000"
           - name: RATE_LIMIT_BURST
-            value: "2000"
+            value: "15000"
           - name: OTEL_EXPORTER_OTLP_ENDPOINT
             value: "otel-collector-collector.otel-collector:4317"
           - name: OTEL_EXPORTER_OTLP_PROTOCOL
