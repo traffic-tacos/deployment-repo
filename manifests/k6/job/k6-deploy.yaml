@@ -6,7 +6,7 @@ metadata:
   labels:
     app: k6
 spec:
-  replicas: 1 # -> 10 -> 30 추후 변경
+  replicas: 10 #-> 30 추후 변경
   selector:
     matchLabels:
       app: k6
