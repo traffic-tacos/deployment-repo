@@ -6,10 +6,9 @@ metadata:
   labels:
     app: k6
 spec:
-  ttlSecondsAfterFinished: 3600  # 1시간 후 자동 삭제
-  backoffLimit: 0  # 실패 시 재시도 안함
-  parallelism: 10 #30
-  #completions: 2
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 0
+  parallelism: 1 #10 #30
   template:
     metadata:
       labels:
@@ -71,6 +70,9 @@ spec:
             requests:
               cpu: "1"
               memory: "2Gi"
+            limits:
+              cpu: "2"
+              memory: "3Gi"
         - name: aws-sigv4-proxy
           image: public.ecr.aws/aws-observability/aws-sigv4-proxy:latest
           args:
@@ -87,4 +89,7 @@ spec:
           resources:
             requests:
               cpu: "100m"
-              memory: "128Mi"
+              memory: "20Mi"
+            limits:
+              cpu: "100m"
+              memory: "30Mi"

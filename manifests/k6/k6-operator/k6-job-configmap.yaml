@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: k6-cm-prod
   namespace: load-test
+  labels:
+    app: k6-operator
 data:
   script.js: |
     import http from 'k6/http';
@@ -10,6 +12,7 @@ data:
     import { Rate, Counter } from 'k6/metrics';
 
     // Custom Metric
+    const totalFlows = new Counter('api_count');
     const queueJoinFailRate = new Rate('queue_join_fail');
     const queueStatusFailRate = new Rate('queue_status_fail');
     const queueEnterFailRate = new Rate('queue_enter_fail');
@@ -36,10 +39,10 @@ data:
               executor: 'ramping-arrival-rate',
               startRate: 0,
               timeUnit: '1s',
-              preAllocatedVUs: 0,
-              maxVUs: 500,
+              preAllocatedVUs: 1000,
+              maxVUs: 3000,
               stages: [
-                  { duration: '5m', target: 10 },
+                  { duration: '5m', target: 1000 },
                   { duration: '5m', target: 0 },
               ],
               exec: 'fullScenario'
@@ -141,176 +144,27 @@ data:
                 },
             }
         );
-        console.log("/queue/enter start2");
         const success = check(enterRes, {
             'queue enter status 200': (r) => r.status === 200,
             'queue enter has reservation token': (r) => r.json('reservation_token') !== undefined,
         });
-        console.log("/queue/enter start3");
         queueEnterFailRate.add(!success);
         
         return success ? enterRes.json('reservation_token') : null;
     }
 
-    // 공통 함수: 예약 생성 /reservations
-    function createReservation(accessToken, eventId) {
-        const authHeaders = {
-            ...baseHeaders,
-            'Authorization': `Bearer ${accessToken}`,
-        };
-        
-        const reserveRes = http.post(
-        `${BASE_URL}${API_PREFIX}/reservations`,
-        JSON.stringify({
-            event_id: eventId,
-            seat_ids: [
-            "A-" + Math.floor(Math.random() * 1000) + 1,
-            "A-" + Math.floor(Math.random() * 1000) + 1,
-            ],
-            "quantity": 2
-            }),
-            { 
-                headers: {
-                    ...authHeaders,
-                    'Idempotency-Key': uuidv4(),
-                },
-                tags: {
-                    api: '/reservations',
-                },
-            }
-        );
-        
-        const success = check(reserveRes, {
-            'reservation created': (r) => r.status === 201 || r.status === 200,
-            'reservation has id': (r) => r.json('reservation_id') !== undefined,
-        });
-        reservationFailRate.add(!success);
-        
-        return success ? { reservationId: reserveRes.json('reservation_id'), authHeaders } : null;
-    }
-
-    // 공통 함수: 결제 /payment/intent
-    function createPayment(accessToken, reservation) {
-        const authHeaders = {
-            ...baseHeaders,
-            'Authorization': `Bearer ${accessToken}`,
-        };
-        
-        const intentRes = http.post(
-            `${BASE_URL}${API_PREFIX}/payment/intent`,
-            JSON.stringify({
-                reservation_id: reservation.reservationId,
-                amount: 50000,
-                currency: "KRW",
-                scenario: "approve"
-            }),
-            { 
-                headers: {
-                    ...reservation.authHeaders,
-                    'Idempotency-Key': uuidv4(),
-                },
-                tags: {
-                    api: '/payment/intent',
-                },
-            }
-        ); 
-        
-        const success = check(intentRes, {
-            'payment created': (r) => r.status === 201 || r.status === 200,
-            'payment has id': (r) => r.json('payment_id') !== undefined,
-        });
-        paymentFailRate.add(!success);
-        
-        return success ? { paymentId: reserveRes.json('payment_id'), authHeaders } : null;
-    }
-
     export function fullScenario() {
+        totalFlows.add(1);
         const queueData = joinQueue();
         if (!queueData) return;
 
-        console.log("waiting_token: ", queueData.waiting_token);
-        
         const ready = pollQueueStatus(queueData.waiting_token);
         if (!ready) return;
         
         const accessToken = enterSystem(queueData.waiting_token);
-        if (!accessToken) return;
         
-        sleep(Math.random() * 2 + 1);
-        const reservation = createReservation(accessToken, queueData.eventId);
-        if (!reservation) return;
-        
-        sleep(Math.random() * 1 + 0.5);
-        http.post(
-            `${BASE_URL}${API_PREFIX}/reservations/${reservation.reservationId}/confirm`,
-            null,
-            {
-                headers: {
-                    ...baseHeaders,
-                    'Idempotency-Key': uuidv4(),
-                },
-                tags: {
-                    api: '/reservation/confirm',
-                },
-            }
-        );
-        
-        // 결제 intent 생성
-        sleep(Math.random() * 2 + 1);
-        
-        const paymentId = createPayment(accessToken, reservation);
-
-        // 결제 처리
-        sleep(Math.random() * 3 + 2);
-        const paymentRes = http.post(
-            `${BASE_URL}${API_PREFIX}/payment/process`,
-            JSON.stringify({
-                payment_id: paymentId,
-                payment_method: 'card',
-            }),
-            {
-                headers: {
-                    ...baseHeaders,
-                    'Idempotency-Key': uuidv4(),
-                },
-                tags: {
-                    api: '/payment/process',
-                },
-            }
-        );
-        
-        const paymentSuccess = check(paymentRes, {
-            'payment successful': (r) => r.status === 200,
-        });
-        paymentFailRate.add(!paymentSuccess);
-        
-        if (paymentSuccess) {
-            // 결제 상태 확인
-            sleep(1);
-            http.get(
-                `${BASE_URL}${API_PREFIX}/payment/${paymentId}/status`,
-                { 
-                    headers: reservation.authHeaders,
-                    'Idempotency-Key': uuidv4(),
-                    tags: {
-                        api: '/payment/status',
-                    },
-                }
-            );
-            
-            // 최종 예약 확인
-            sleep(0.5);
-            http.get(
-                `${BASE_URL}${API_PREFIX}/reservations/${reservation.reservationId}`,
-                { 
-                    headers: reservation.authHeaders,
-                    'Idempotency-Key': uuidv4(),
-                    tags: {
-                        api: '/reservations/confirm',
-                    },
-                }
-            );
-            
+        if (accessToken)
             completedFlows.add(1);
-        }
+        else
+            return;
     }
