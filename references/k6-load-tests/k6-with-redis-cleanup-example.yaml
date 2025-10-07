@@ -1,0 +1,217 @@
+---
+# K6 테스트 with Redis Cleanup Example
+# teardown() 함수를 사용하여 테스트 종료 시 자동으로 Redis 정리
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k6-script-with-cleanup
+  namespace: load-test
+  labels:
+    app.kubernetes.io/name: k6-cleanup-example
+data:
+  script.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+    import { Rate, Counter } from 'k6/metrics';
+
+    const queueJoinFailRate = new Rate('queue_join_fail_rate');
+    const completedFlows = new Counter('completed_flows');
+
+    function uuidv4() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    export const options = {
+        scenarios: {
+          quick_test: {
+              executor: 'constant-arrival-rate',
+              rate: 100,
+              timeUnit: '1s',
+              duration: '2m',
+              preAllocatedVUs: 50,
+              maxVUs: 200,
+              exec: 'quickScenario',
+          }
+        },
+        thresholds: {
+            'http_req_duration': ['p(95)<500'],
+            'queue_join_fail_rate': ['rate<0.01'],
+        }
+    };
+
+    const BASE_URL = __ENV.BASE_URL || 'http://gateway-api.tacos-app.svc.cluster.local:8000';
+
+    export function quickScenario() {
+        const eventId = `evt_${Math.floor(Math.random() * 100)}`;
+        const userId = `u${uuidv4()}`;
+        const idempotencyKey = uuidv4();
+
+        // Queue Join
+        const joinRes = http.post(`${BASE_URL}/api/v1/queue/join`, 
+            JSON.stringify({
+                event_id: eventId,
+                user_id: userId,
+            }), 
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Idempotency-Key': idempotencyKey,
+                },
+                tags: { name: 'QueueJoin' }
+            }
+        );
+
+        check(joinRes, {
+            'Queue join status 202': (r) => r.status === 202,
+        }) || queueJoinFailRate.add(1);
+
+        if (joinRes.status === 202) {
+            completedFlows.add(1);
+        }
+
+        sleep(0.5);
+    }
+
+    // 🧹 테스트 종료 후 실행되는 정리 함수
+    export function teardown(data) {
+        console.log('');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('🧹 Starting Redis cleanup after K6 test completion...');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('');
+
+        const cleanupUrl = `${BASE_URL}/internal/admin/redis/cleanup`;
+        
+        // 1. DryRun으로 먼저 확인
+        console.log('📊 Phase 1: Checking keys to be deleted (DryRun)...');
+        const dryRunRes = http.post(cleanupUrl, JSON.stringify({
+            patterns: [
+                'stream:event:*',
+                'dedupe:*',
+                'waiting_token:*',
+                'reservation_token:*',
+                'idempotency:*',
+                'ratelimit:*',
+                'queue:*',
+            ],
+            dry_run: true
+        }), {
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Token': __ENV.ADMIN_TOKEN || 'test-admin-token'
+            },
+            timeout: '60s'
+        });
+
+        if (check(dryRunRes, {
+            'DryRun successful': (r) => r.status === 200
+        })) {
+            const dryRunData = dryRunRes.json();
+            console.log(`   ℹ️  Keys to be deleted: ${dryRunData.deleted_count}`);
+            console.log('');
+
+            // 2. 실제 삭제 수행
+            if (dryRunData.deleted_count > 0) {
+                console.log('🗑️  Phase 2: Deleting Redis keys...');
+                const cleanupRes = http.post(cleanupUrl, JSON.stringify({
+                    patterns: [
+                        'stream:event:*',
+                        'dedupe:*',
+                        'waiting_token:*',
+                        'reservation_token:*',
+                        'idempotency:*',
+                        'ratelimit:*',
+                        'queue:*',
+                    ],
+                    dry_run: false
+                }), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Token': __ENV.ADMIN_TOKEN || 'test-admin-token'
+                    },
+                    timeout: '60s'
+                });
+
+                if (check(cleanupRes, {
+                    'Cleanup successful': (r) => r.status === 200
+                })) {
+                    const cleanupData = cleanupRes.json();
+                    console.log(`   ✅ Successfully deleted ${cleanupData.deleted_count} keys`);
+                    console.log('');
+                    console.log('Cleaned patterns:');
+                    cleanupData.patterns.forEach(pattern => {
+                        console.log(`   - ${pattern}`);
+                    });
+                } else {
+                    console.error(`   ❌ Cleanup failed with status: ${cleanupRes.status}`);
+                    console.error(`   Response: ${cleanupRes.body}`);
+                }
+            } else {
+                console.log('   ℹ️  No keys to delete - Redis is already clean');
+            }
+        } else {
+            console.error(`❌ DryRun failed with status: ${dryRunRes.status}`);
+            console.error(`Response: ${dryRunRes.body}`);
+        }
+
+        console.log('');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('✅ Redis cleanup process completed');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('');
+    }
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-test-with-cleanup
+  namespace: load-test
+  labels:
+    app.kubernetes.io/name: k6-cleanup-test
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app: k6-cleanup-test
+    spec:
+      serviceAccountName: k6-sa
+      restartPolicy: Never
+      containers:
+      - name: k6
+        image: grafana/k6:latest
+        command:
+        - k6
+        - run
+        - /scripts/script.js
+        - --out
+        - json=/tmp/results.json
+        env:
+        - name: BASE_URL
+          value: "http://gateway-api.tacos-app.svc.cluster.local:8000"
+        - name: ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: k6-admin-token
+              key: token
+              optional: true
+        volumeMounts:
+        - name: k6-script
+          mountPath: /scripts
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+      volumes:
+      - name: k6-script
+        configMap:
+          name: k6-script-with-cleanup
