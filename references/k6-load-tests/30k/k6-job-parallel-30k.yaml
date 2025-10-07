@@ -1,0 +1,552 @@
+---
+# Job 1/6: 5k RPS
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-loadtest-30k-part1
+  namespace: load-test
+  labels:
+    app: k6
+    test: 30k-distributed
+    part: "1"
+spec:
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: k6
+        test: 30k-distributed
+        part: "1"
+    spec:
+      restartPolicy: Never
+      serviceAccountName: k6-runner
+      nodeSelector:
+        workload-type: loadtest
+      tolerations:
+        - effect: NoSchedule
+          key: workload
+          operator: Equal
+          value: loadtest
+      volumes:
+        - name: aws-iam-token
+          projected:
+            defaultMode: 420
+            sources:
+            - serviceAccountToken:
+                audience: sts.amazonaws.com
+                expirationSeconds: 86400
+                path: token
+        - name: k6-test-volume
+          configMap:
+            name: k6-script-30k-part1
+      containers:
+        - name: k6
+          image: grafana/k6:latest
+          command: ["k6"]
+          args:
+            - "run"
+            - "/test/script.js"
+          ports:
+            - containerPort: 6565
+          volumeMounts:
+            - mountPath: /test
+              name: k6-test-volume
+              readOnly: true
+          env:
+            - name: TARGET_BASE_URL
+              value: "https://api.traffictacos.store"
+            - name: K6_OUT
+              value: experimental-prometheus-rw
+            - name: K6_PROMETHEUS_RW_SERVER_URL
+              value: http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write
+            - name: K6_PROMETHEUS_RW_TREND_STATS
+              value: "p(90),p(95),p(99),max,min,avg,med"
+            - name: K6_PROMETHEUS_RW_TAGS
+              value: "testid,tags,scenario,url,method,status,part"
+            - name: K6_PROMETHEUS_RW_PUSH_INTERVAL
+              value: "15s"
+            - name: PART_ID
+              value: "1"
+          resources:
+            requests:
+              cpu: "2000m"
+              memory: "4Gi"
+            limits:
+              cpu: "3000m"
+              memory: "6Gi"
+        - name: aws-sigv4-proxy
+          image: public.ecr.aws/aws-observability/aws-sigv4-proxy:latest
+          args:
+            - "--name=aps"
+            - "--region=ap-northeast-2"
+            - "--host=aps-workspaces.ap-northeast-2.amazonaws.com"
+            - "--port=:8005"
+          volumeMounts:
+          - name: aws-iam-token
+            mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
+            readOnly: true
+          ports:
+            - containerPort: 8005
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+# Job 2/6: 5k RPS
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-loadtest-30k-part2
+  namespace: load-test
+  labels:
+    app: k6
+    test: 30k-distributed
+    part: "2"
+spec:
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: k6
+        test: 30k-distributed
+        part: "2"
+    spec:
+      restartPolicy: Never
+      serviceAccountName: k6-runner
+      nodeSelector:
+        workload-type: loadtest
+      tolerations:
+        - effect: NoSchedule
+          key: workload
+          operator: Equal
+          value: loadtest
+      volumes:
+        - name: aws-iam-token
+          projected:
+            defaultMode: 420
+            sources:
+            - serviceAccountToken:
+                audience: sts.amazonaws.com
+                expirationSeconds: 86400
+                path: token
+        - name: k6-test-volume
+          configMap:
+            name: k6-script-30k-part2
+      containers:
+        - name: k6
+          image: grafana/k6:latest
+          command: ["k6"]
+          args: ["run", "/test/script.js"]
+          ports:
+            - containerPort: 6565
+          volumeMounts:
+            - mountPath: /test
+              name: k6-test-volume
+              readOnly: true
+          env:
+            - name: TARGET_BASE_URL
+              value: "https://api.traffictacos.store"
+            - name: K6_OUT
+              value: experimental-prometheus-rw
+            - name: K6_PROMETHEUS_RW_SERVER_URL
+              value: http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write
+            - name: K6_PROMETHEUS_RW_TREND_STATS
+              value: "p(90),p(95),p(99),max,min,avg,med"
+            - name: K6_PROMETHEUS_RW_TAGS
+              value: "testid,tags,scenario,url,method,status,part"
+            - name: K6_PROMETHEUS_RW_PUSH_INTERVAL
+              value: "15s"
+            - name: PART_ID
+              value: "2"
+          resources:
+            requests:
+              cpu: "2000m"
+              memory: "4Gi"
+            limits:
+              cpu: "3000m"
+              memory: "6Gi"
+        - name: aws-sigv4-proxy
+          image: public.ecr.aws/aws-observability/aws-sigv4-proxy:latest
+          args: ["--name=aps", "--region=ap-northeast-2", "--host=aps-workspaces.ap-northeast-2.amazonaws.com", "--port=:8005"]
+          volumeMounts:
+          - name: aws-iam-token
+            mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
+            readOnly: true
+          ports:
+            - containerPort: 8005
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+# Job 3/6: 5k RPS
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-loadtest-30k-part3
+  namespace: load-test
+  labels:
+    app: k6
+    test: 30k-distributed
+    part: "3"
+spec:
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: k6
+        test: 30k-distributed
+        part: "3"
+    spec:
+      restartPolicy: Never
+      serviceAccountName: k6-runner
+      nodeSelector:
+        workload-type: loadtest
+      tolerations:
+        - effect: NoSchedule
+          key: workload
+          operator: Equal
+          value: loadtest
+      volumes:
+        - name: aws-iam-token
+          projected:
+            defaultMode: 420
+            sources:
+            - serviceAccountToken:
+                audience: sts.amazonaws.com
+                expirationSeconds: 86400
+                path: token
+        - name: k6-test-volume
+          configMap:
+            name: k6-script-30k-part3
+      containers:
+        - name: k6
+          image: grafana/k6:latest
+          command: ["k6"]
+          args: ["run", "/test/script.js"]
+          ports:
+            - containerPort: 6565
+          volumeMounts:
+            - mountPath: /test
+              name: k6-test-volume
+              readOnly: true
+          env:
+            - name: TARGET_BASE_URL
+              value: "https://api.traffictacos.store"
+            - name: K6_OUT
+              value: experimental-prometheus-rw
+            - name: K6_PROMETHEUS_RW_SERVER_URL
+              value: http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write
+            - name: K6_PROMETHEUS_RW_TREND_STATS
+              value: "p(90),p(95),p(99),max,min,avg,med"
+            - name: K6_PROMETHEUS_RW_TAGS
+              value: "testid,tags,scenario,url,method,status,part"
+            - name: K6_PROMETHEUS_RW_PUSH_INTERVAL
+              value: "15s"
+            - name: PART_ID
+              value: "3"
+          resources:
+            requests:
+              cpu: "2000m"
+              memory: "4Gi"
+            limits:
+              cpu: "3000m"
+              memory: "6Gi"
+        - name: aws-sigv4-proxy
+          image: public.ecr.aws/aws-observability/aws-sigv4-proxy:latest
+          args: ["--name=aps", "--region=ap-northeast-2", "--host=aps-workspaces.ap-northeast-2.amazonaws.com", "--port=:8005"]
+          volumeMounts:
+          - name: aws-iam-token
+            mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
+            readOnly: true
+          ports:
+            - containerPort: 8005
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+# Job 4/6: 5k RPS
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-loadtest-30k-part4
+  namespace: load-test
+  labels:
+    app: k6
+    test: 30k-distributed
+    part: "4"
+spec:
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: k6
+        test: 30k-distributed
+        part: "4"
+    spec:
+      restartPolicy: Never
+      serviceAccountName: k6-runner
+      nodeSelector:
+        workload-type: loadtest
+      tolerations:
+        - effect: NoSchedule
+          key: workload
+          operator: Equal
+          value: loadtest
+      volumes:
+        - name: aws-iam-token
+          projected:
+            defaultMode: 420
+            sources:
+            - serviceAccountToken:
+                audience: sts.amazonaws.com
+                expirationSeconds: 86400
+                path: token
+        - name: k6-test-volume
+          configMap:
+            name: k6-script-30k-part4
+      containers:
+        - name: k6
+          image: grafana/k6:latest
+          command: ["k6"]
+          args: ["run", "/test/script.js"]
+          ports:
+            - containerPort: 6565
+          volumeMounts:
+            - mountPath: /test
+              name: k6-test-volume
+              readOnly: true
+          env:
+            - name: TARGET_BASE_URL
+              value: "https://api.traffictacos.store"
+            - name: K6_OUT
+              value: experimental-prometheus-rw
+            - name: K6_PROMETHEUS_RW_SERVER_URL
+              value: http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write
+            - name: K6_PROMETHEUS_RW_TREND_STATS
+              value: "p(90),p(95),p(99),max,min,avg,med"
+            - name: K6_PROMETHEUS_RW_TAGS
+              value: "testid,tags,scenario,url,method,status,part"
+            - name: K6_PROMETHEUS_RW_PUSH_INTERVAL
+              value: "15s"
+            - name: PART_ID
+              value: "4"
+          resources:
+            requests:
+              cpu: "2000m"
+              memory: "4Gi"
+            limits:
+              cpu: "3000m"
+              memory: "6Gi"
+        - name: aws-sigv4-proxy
+          image: public.ecr.aws/aws-observability/aws-sigv4-proxy:latest
+          args: ["--name=aps", "--region=ap-northeast-2", "--host=aps-workspaces.ap-northeast-2.amazonaws.com", "--port=:8005"]
+          volumeMounts:
+          - name: aws-iam-token
+            mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
+            readOnly: true
+          ports:
+            - containerPort: 8005
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+# Job 5/6: 5k RPS
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-loadtest-30k-part5
+  namespace: load-test
+  labels:
+    app: k6
+    test: 30k-distributed
+    part: "5"
+spec:
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: k6
+        test: 30k-distributed
+        part: "5"
+    spec:
+      restartPolicy: Never
+      serviceAccountName: k6-runner
+      nodeSelector:
+        workload-type: loadtest
+      tolerations:
+        - effect: NoSchedule
+          key: workload
+          operator: Equal
+          value: loadtest
+      volumes:
+        - name: aws-iam-token
+          projected:
+            defaultMode: 420
+            sources:
+            - serviceAccountToken:
+                audience: sts.amazonaws.com
+                expirationSeconds: 86400
+                path: token
+        - name: k6-test-volume
+          configMap:
+            name: k6-script-30k-part5
+      containers:
+        - name: k6
+          image: grafana/k6:latest
+          command: ["k6"]
+          args: ["run", "/test/script.js"]
+          ports:
+            - containerPort: 6565
+          volumeMounts:
+            - mountPath: /test
+              name: k6-test-volume
+              readOnly: true
+          env:
+            - name: TARGET_BASE_URL
+              value: "https://api.traffictacos.store"
+            - name: K6_OUT
+              value: experimental-prometheus-rw
+            - name: K6_PROMETHEUS_RW_SERVER_URL
+              value: http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write
+            - name: K6_PROMETHEUS_RW_TREND_STATS
+              value: "p(90),p(95),p(99),max,min,avg,med"
+            - name: K6_PROMETHEUS_RW_TAGS
+              value: "testid,tags,scenario,url,method,status,part"
+            - name: K6_PROMETHEUS_RW_PUSH_INTERVAL
+              value: "15s"
+            - name: PART_ID
+              value: "5"
+          resources:
+            requests:
+              cpu: "2000m"
+              memory: "4Gi"
+            limits:
+              cpu: "3000m"
+              memory: "6Gi"
+        - name: aws-sigv4-proxy
+          image: public.ecr.aws/aws-observability/aws-sigv4-proxy:latest
+          args: ["--name=aps", "--region=ap-northeast-2", "--host=aps-workspaces.ap-northeast-2.amazonaws.com", "--port=:8005"]
+          volumeMounts:
+          - name: aws-iam-token
+            mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
+            readOnly: true
+          ports:
+            - containerPort: 8005
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+# Job 6/6: 5k RPS
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-loadtest-30k-part6
+  namespace: load-test
+  labels:
+    app: k6
+    test: 30k-distributed
+    part: "6"
+spec:
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: k6
+        test: 30k-distributed
+        part: "6"
+    spec:
+      restartPolicy: Never
+      serviceAccountName: k6-runner
+      nodeSelector:
+        workload-type: loadtest
+      tolerations:
+        - effect: NoSchedule
+          key: workload
+          operator: Equal
+          value: loadtest
+      volumes:
+        - name: aws-iam-token
+          projected:
+            defaultMode: 420
+            sources:
+            - serviceAccountToken:
+                audience: sts.amazonaws.com
+                expirationSeconds: 86400
+                path: token
+        - name: k6-test-volume
+          configMap:
+            name: k6-script-30k-part6
+      containers:
+        - name: k6
+          image: grafana/k6:latest
+          command: ["k6"]
+          args: ["run", "/test/script.js"]
+          ports:
+            - containerPort: 6565
+          volumeMounts:
+            - mountPath: /test
+              name: k6-test-volume
+              readOnly: true
+          env:
+            - name: TARGET_BASE_URL
+              value: "https://api.traffictacos.store"
+            - name: K6_OUT
+              value: experimental-prometheus-rw
+            - name: K6_PROMETHEUS_RW_SERVER_URL
+              value: http://localhost:8005/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write
+            - name: K6_PROMETHEUS_RW_TREND_STATS
+              value: "p(90),p(95),p(99),max,min,avg,med"
+            - name: K6_PROMETHEUS_RW_TAGS
+              value: "testid,tags,scenario,url,method,status,part"
+            - name: K6_PROMETHEUS_RW_PUSH_INTERVAL
+              value: "15s"
+            - name: PART_ID
+              value: "6"
+          resources:
+            requests:
+              cpu: "2000m"
+              memory: "4Gi"
+            limits:
+              cpu: "3000m"
+              memory: "6Gi"
+        - name: aws-sigv4-proxy
+          image: public.ecr.aws/aws-observability/aws-sigv4-proxy:latest
+          args: ["--name=aps", "--region=ap-northeast-2", "--host=aps-workspaces.ap-northeast-2.amazonaws.com", "--port=:8005"]
+          volumeMounts:
+          - name: aws-iam-token
+            mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
+            readOnly: true
+          ports:
+            - containerPort: 8005
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
