@@ -121,6 +121,20 @@ spec:
           value: "http/protobuf"
         - name: OTEL_EXPORTER_OTLP_INSECURE
           value: "true"
+        
+        # JVM Memory Optimization (Fix memory leak/GC issues)
+        - name: JAVA_TOOL_OPTIONS
+          value: >-
+            -Xms512m
+            -Xmx512m
+            -XX:+UseG1GC
+            -XX:MaxGCPauseMillis=200
+            -XX:+UseStringDeduplication
+            -XX:MaxMetaspaceSize=128m
+            -XX:+HeapDumpOnOutOfMemoryError
+            -XX:HeapDumpPath=/tmp/heapdump.hprof
+            -XX:+ExitOnOutOfMemoryError
+            -Djava.security.egd=file:/dev/./urandom
 
         resources:
           requests:
