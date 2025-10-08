@@ -91,7 +91,7 @@ data:
         });
 
         if(joinRes.json('status') != 202)
-            console.log(joinRes.json('status'), waiting_token);
+            console.log(joinRes.json('status'), joinRes.json('waiting_token'));
 
         queueJoinFailRate.add(!success);
         
