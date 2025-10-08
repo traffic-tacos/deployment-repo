@@ -97,7 +97,7 @@ data:
     // 공통 함수: 대기열 상태 폴링 /queue/status?token=${waiting_token}
     function pollQueueStatus(waiting_token, maxAttempts = 10000000) {
         for (let i = 0; i < maxAttempts; i++) {
-            sleep(Math.random() * 2 + 2); // 2-4초
+            sleep(Math.random() * 2 + 2); // 2-4s
             
             const statusRes = http.get(
                 `${BASE_URL}${API_PREFIX}/queue/status?token=${waiting_token}`,
