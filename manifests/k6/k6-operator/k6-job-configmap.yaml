@@ -115,7 +115,10 @@ data:
             const statusRes = http.get(
                 `${BASE_URL}${API_PREFIX}/queue/status?token=${waiting_token}`,
                 {
-                    tags: { 
+                    headers: {
+                        ...baseHeaders
+                    },
+                    tags: {
                         api: '/queue/status',
                     },
                 }
