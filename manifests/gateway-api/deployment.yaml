@@ -155,6 +155,24 @@ spec:
                 key: jwt-secret
                 optional: false
           
+          # 🔴 Go Runtime Memory Optimization (Fix HPA Scale-down)
+          # GOMEMLIMIT: Soft memory limit for GC target (~90% of memory limit)
+          # Prevents OOM while ensuring GC runs more aggressively
+          - name: GOMEMLIMIT
+            value: "450MiB"  # 512Mi limit * 0.88 = ~450Mi (留 headroom for stack/metadata)
+          
+          # GOGC: GC target percentage (lower = more frequent GC, default 100)
+          # 75 = trigger GC when heap grows 75% (vs 100% default)
+          # Tradeoff: More CPU for less memory usage
+          - name: GOGC
+            value: "75"
+          
+          # GODEBUG: Runtime debugging flags
+          # gctrace=1: Print GC logs (for debugging, can remove after verification)
+          # madvdontneed=1: Return memory to OS immediately (Linux kernel 4.5+)
+          - name: GODEBUG
+            value: "madvdontneed=1"
+          
           resources:
             requests:
               cpu: 800m
