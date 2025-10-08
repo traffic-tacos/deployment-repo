@@ -1,0 +1,91 @@
+# 1. Tail-Sampling용 Collector (Deployment 모드)
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  name: otel-collector-with-ta
+  namespace: otel-collector
+spec:
+  mode: statefulset
+  serviceAccount: otel-collector-sa
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: node-type
+            operator: In
+            values:
+            - monitoring
+        topologyKey: "kubernetes.io/hostname"
+  tolerations:
+  - key: "workload"
+    operator: "Equal"
+    value: "monitoring"
+    effect: "NoSchedule"
+  targetAllocator:
+    enabled: true
+    serviceAccount: otel-collector-with-ta-targetallocator
+    prometheusCR:
+      enabled: false
+  config: |
+    receivers:
+      # Kubernetes 클러스터 리소스 메트릭 (Pods, Deployments, Services 등)
+      k8s_cluster:
+        collection_interval: 5s
+        node_conditions_to_report: ["Ready", "MemoryPressure"]
+        allocatable_types_to_report: ["cpu", "memory", "storage", "pods"]
+        
+      
+      prometheus:
+        config:
+          scrape_configs:
+          - job_name: 'otel-collector'
+            scrape_interval: 10s
+            static_configs:
+            - targets: [ '0.0.0.0:8888' ]
+            metric_relabel_configs:
+            - action: labeldrop
+              regex: (id|name)
+              replacement: $$1
+            - action: labelmap
+              regex: label_(.+)
+              replacement: $$1
+          - job_name: 'prometheus-node-exporter-pods'
+            scrape_interval: 15s
+            static_configs:
+            - targets: 
+              - '10.180.6.68:9100'
+              - '10.180.4.55:9100'
+              - '10.180.9.3:9100'
+              labels:
+                job: prometheus-node-exporter
+            metric_relabel_configs:
+            - source_labels: [__name__]
+              regex: 'node_.*'
+              action: keep
+    processors:
+      batch: # buffer up to 10000 spans, metric data points, log records for up to 5 seconds
+        send_batch_size: 10000
+        timeout: 5s
+      memory_limiter:
+        check_interval: 1s # recommended by official README
+        limit_percentage: 80 # in 1Gi memory environment, hard limit is 800Mi
+        spike_limit_percentage: 25 # in 1Gi memory environment, soft limit is 500Mi (800 - 250 = 550Mi)
+    exporters:
+      prometheusremotewrite:
+        endpoint: "https://aps-workspaces.ap-northeast-2.amazonaws.com/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write"
+        resource_to_telemetry_conversion:
+          enabled: true
+        auth:
+          authenticator: sigv4auth
+    
+    extensions:
+      sigv4auth: {}
+
+    service:
+      extensions: [sigv4auth]
+      pipelines:
+        metrics:
+          receivers: [prometheus, k8s_cluster]
+          processors: [memory_limiter, batch]
+          exporters: [prometheusremotewrite]
