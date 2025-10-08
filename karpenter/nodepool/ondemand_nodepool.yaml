@@ -11,10 +11,10 @@ spec:
     budgets:
     - nodes: 20%
     consolidateAfter: 2m      
-    consolidationPolicy: WhenEmpty
+    consolidationPolicy: WhenUnderutilized
   limits:
-    cpu: "300"
-    memory: 800Gi
+    cpu: "160"
+    memory: 400Gi
   template:
     metadata:
       labels:
