@@ -74,7 +74,7 @@ data:
             {
                 headers: {
                     ...baseHeaders,
-                    'Idempotency-Key': uuidv4(),
+                    'Idempotency-Key': `${__VU}-${uuidv4()}`,
                 },
                 tags: {
                     api: '/queue/join',
@@ -133,7 +133,7 @@ data:
             {
                 headers: {
                     ...baseHeaders,
-                    'Idempotency-Key': uuidv4(),
+                    'Idempotency-Key': `${__VU}-${uuidv4()}`,
                 },
                 tags: {
                     api: '/queue/enter',
