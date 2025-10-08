@@ -61,7 +61,8 @@ data:
     const API_PREFIX = '/api/v1';
 
     const baseHeaders = {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'User-Agent': 'k6-load-test/1.0'
     };
 
     // 공통 함수: 대기열 진입 /queue/join
