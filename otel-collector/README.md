@@ -99,6 +99,7 @@ OpenTelemetry Collector는 관측성 데이터(메트릭, 로그, 트레이스)�
 
 **특징**:
 - **Target Allocator**: Prometheus 스크레이핑 타겟을 자동으로 분배
+- **Prometheus CR 지원**: ServiceMonitor 및 PodMonitor CRD를 통한 자동 타겟 검색
 - **Pod Anti-Affinity**: 고가용성을 위한 분산 배치
 - **Monitoring Node 전용**: Tolerations를 통해 모니터링 노드에 배포
 
@@ -201,12 +202,55 @@ actuator health check 엔드포인트는 트레이스와 로그에서 자동으�
 - Hard Limit: 80% (1Gi 환경에서 800Mi)
 - Soft Limit: 500Mi (Spike 방지)
 
-### 4. Batch 처리
+### 4. Prometheus CRD 통합 (StatefulSet Collector)
+Target Allocator가 **ServiceMonitor**와 **PodMonitor** 리소스를 자동으로 검색합니다:
+
+```yaml
+targetAllocator:
+  enabled: true
+  prometheusCR:
+    enabled: true  # ServiceMonitor/PodMonitor 자동 검색 활성화
+```
+
+**작동 방식**:
+1. Target Allocator가 클러스터 내 ServiceMonitor/PodMonitor CRD를 모니터링
+2. CRD에 정의된 selector와 매칭되는 Service/Pod 자동 검색
+3. 검색된 엔드포인트를 Prometheus scrape 타겟으로 자동 등록
+4. 타겟 목록을 Collector 인스턴스들에게 자동 분배
+
+**장점**:
+- 수동 IP 설정 불필요 (Pod 재시작 시에도 자동 추적)
+- Prometheus Operator와 동일한 방식으로 모니터링 설정 가능
+- 선언적 설정으로 타겟 관리 간소화
+
+**예시 - ServiceMonitor 사용**:
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: gateway-api-monitor
+  namespace: tacos-app
+spec:
+  selector:
+    matchLabels:
+      app: gateway-api
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+```
+
+위와 같이 ServiceMonitor를 생성하면, Target Allocator가 자동으로:
+- `app: gateway-api` 레이블을 가진 Service 검색
+- Service의 `metrics` 포트로 `/metrics` 경로를 30초마다 스크레이핑
+- 타겟을 여러 Collector 인스턴스에 자동 분배
+
+### 5. Batch 처리
 효율적인 데이터 전송을 위한 배치 처리:
 - Batch Size: 10,000개
 - Timeout: 5-10초
 
-### 5. 롤링 업데이트 전략
+### 6. 롤링 업데이트 전략
 무중단 배포를 위한 업데이트 전략:
 - MaxUnavailable: 25%
 
@@ -296,6 +340,13 @@ kubectl logs -n otel-collector -l app.kubernetes.io/component=opentelemetry-targ
 # Target 할당 상태 확인 (TargetAllocator Service Port-forward)
 kubectl port-forward -n otel-collector svc/otel-collector-with-ta-targetallocator 8080:80
 curl http://localhost:8080/jobs
+
+# ServiceMonitor/PodMonitor 리소스 확인 (prometheusCR enabled 시)
+kubectl get servicemonitors --all-namespaces
+kubectl get podmonitors --all-namespaces
+
+# 특정 ServiceMonitor 상세 정보
+kubectl describe servicemonitor <monitor-name> -n <namespace>
 ```
 
 ### 메모리 부족 문제
@@ -327,6 +378,17 @@ kubectl get pods -n otel-collector <pod-name> -o jsonpath='{.spec.containers[0].
 
 ### 3. AMP Workspace 변경
 `prometheusremotewrite.endpoint`의 Workspace ID를 변경해야 합니다.
+
+### 4. Prometheus CRD 활성화/비활성화
+**prometheusCR을 활성화**하는 경우:
+- Prometheus Operator의 CRD (ServiceMonitor/PodMonitor)가 클러스터에 설치되어 있어야 함
+- Target Allocator가 이러한 리소스를 자동으로 검색하여 타겟 생성
+- 수동 `scrape_configs` 설정 불필요
+
+**prometheusCR을 비활성화**하는 경우:
+- `prometheus.config.scrape_configs`에 수동으로 타겟 설정 필요
+- `kubernetes_sd_configs` 또는 `static_configs` 사용
+- Prometheus Operator 없이도 사용 가능
 
 ## 참고 자료
 
