@@ -35,12 +35,14 @@ data:
         },
         systemTags: ['status', 'method', 'scenario', 'expected_response', 'pod'], //url, name 제거
         scenarios: {
-            full_success_flow: {
+            ticket_click_once: {
                 executor: 'per-vu-iterations',  // 각 VU가 1회 실행 후 종료
-                vus: 10000,
+                vus: 5000,
                 iterations: 1,
-                maxDuration: '5m',
-                exec: 'fullScenario'
+                maxDuration: '5m',              // 테스트 종료 시간    
+                startTime: '0s',
+                exec: 'fullScenario',
+                gracefulStop: '5s',             // 시나리오 종료 후 실행 중인 요청들
             },
         },
         thresholds: {
@@ -74,7 +76,7 @@ data:
             {
                 headers: {
                     ...baseHeaders,
-                    'Idempotency-Key': uuidv4(),
+                    'Idempotency-Key': `${__VU}-${uuidv4()}`,
                 },
                 tags: {
                     api: '/queue/join',
@@ -87,6 +89,9 @@ data:
             'queue join status 202': (r) => r.status === 202,
             'queue join has token': (r) => r.json('waiting_token') !== undefined,
         });
+
+        if(statusRes.json('status') != 202)
+            console.log(statusRes.json('status'), waiting_token);
 
         queueJoinFailRate.add(!success);
         
@@ -108,15 +113,13 @@ data:
             );
 
             if (statusRes.status === 200) {
-                console.log(waiting_token, statusRes.json('ready_for_entry'));
+                //console.log(waiting_token, statusRes.json('ready_for_entry'));
                 if (statusRes.json('ready_for_entry') === true) {
-                    console.log('success');
                     return true;
                 }
             }
             else
             {
-                console.log('fail');
                 queueStatusFailRate.add(false);
             }
         }
@@ -133,17 +136,19 @@ data:
             {
                 headers: {
                     ...baseHeaders,
-                    'Idempotency-Key': uuidv4(),
+                    'Idempotency-Key': `${__VU}-${uuidv4()}`,
                 },
                 tags: {
                     api: '/queue/enter',
                 },
             }
         );
+
         const success = check(enterRes, {
             'queue enter status 200': (r) => r.status === 200,
             'queue enter has reservation token': (r) => r.json('reservation_token') !== undefined,
         });
+
         queueEnterFailRate.add(!success);
         
         return success ? enterRes.json('reservation_token') : null;
