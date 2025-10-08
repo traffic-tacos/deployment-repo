@@ -20,7 +20,11 @@ OpenTelemetry Collector는 관측성 데이터(메트릭, 로그, 트레이스)�
 ### 주요 목적
 - **트레이스 수집**: OTLP 프로토콜을 통해 애플리케이션 트레이스를 수집하여 AWS X-Ray로 전송
 - **메트릭 수집**: Kubernetes 클러스터 메트릭 및 애플리케이션 메트릭을 수집하여 Amazon Managed Prometheus (AMP)로 전송
-- **로그 수집**: 애플리케이션 로그를 수집하여 Amazon CloudWatch Logs로 전송
+- **로그 수집**: 
+  - OTLP 프로토콜을 통한 구조화된 로그 수집
+  - 파일 기반 Kubernetes 컨테이너 로그 수집 (gateway-api)
+  - JSON 로그 자동 파싱 및 Severity 레벨 매핑
+  - Amazon CloudWatch Logs로 전송
 
 ## 아키텍처
 
@@ -39,7 +43,9 @@ OpenTelemetry Collector는 관측성 데이터(메트릭, 로그, 트레이스)�
 │  │  OTel Collector (DaemonSet)                  │ │
 │  │  - kubeletstats receiver                     │ │
 │  │  - OTLP receiver (4317/4318)                 │ │
+│  │  - filelog receiver (/var/log/pods)          │ │
 │  │  - k8sattributes processor                   │ │
+│  │  - Log parsing (CRI + JSON)                  │ │
 │  └──────┬────────────────────────────┬──────────┘ │
 │         │                            │            │
 │         │                            │            │
@@ -58,7 +64,8 @@ OpenTelemetry Collector는 관측성 데이터(메트릭, 로그, 트레이스)�
 │              AWS Services                       │
 │  ┌────────────┐  ┌─────────┐  ┌────────────┐    │
 │  │  X-Ray     │  │   AMP   │  │ CloudWatch │    │
-│  │ (Traces)   │  │(Metrics)│  │  (Logs)    │    │
+│  │ (Traces)   │  │(Metrics)│  │   Logs     │    │
+│  │            │  │         │  │  (Logs)    │    │
 │  └────────────┘  └─────────┘  └────────────┘    │
 └─────────────────────────────────────────────────┘
 ```
@@ -73,18 +80,32 @@ OpenTelemetry Collector는 관측성 데이터(메트릭, 로그, 트레이스)�
 **수집 데이터**:
 - Node/Pod/Container 메트릭 (kubeletstats receiver)
 - 애플리케이션 트레이스 (OTLP receiver)
-- 애플리케이션 로그 (OTLP receiver)
+- 애플리케이션 로그 - OTLP 방식 (OTLP receiver)
+- 애플리케이션 로그 - 파일 방식 (filelog receiver)
+  - `/var/log/pods/*/gateway-api*/*.log` 경로의 로그 수집
+  - CRI (Container Runtime Interface) 로그 포맷 파싱
+  - JSON 형식 로그 자동 파싱 (logrus 등)
+  - Severity 레벨 자동 매핑 (debug, info, warn, error, fatal)
 - 애플리케이션 커스텀 메트릭 (OTLP receiver)
 
 **처리 기능**:
 - Kubernetes 속성 추가 (k8sattributes processor)
 - Health check 엔드포인트 필터링 (filter/healthcheck processor)
 - 배치 처리 (batch processor)
+- 로그 파싱 및 구조화 (regex_parser, json_parser, severity_parser)
 
 **전송 대상**:
 - AWS X-Ray (트레이스)
 - Amazon Managed Prometheus (메트릭)
 - Amazon CloudWatch Logs (로그)
+
+**로그 파이프라인**:
+- `logs/otel`: 프로덕션 로그 파이프라인 (CloudWatch Logs로 전송)
+- `logs/debugging`: 디버깅 로그 파이프라인 (콘솔 출력, 상세 모드)
+
+**디버깅 설정**:
+- 텔레메트리 로그 레벨: `debug` (Collector 자체 로그)
+- Debug exporter: `verbosity: detailed` (수집된 데이터 상세 출력)
 
 ### 2. 모니터링 Collector (StatefulSet)
 **파일**: `otel-collector-statefulset-with-ta.yaml`
@@ -279,6 +300,55 @@ spec:
 무중단 배포를 위한 업데이트 전략:
 - MaxUnavailable: 25%
 
+### 7. 컨테이너 로그 수집 및 파싱
+파일 시스템 기반 로그 수집 (filelog receiver):
+
+**수집 대상**:
+- Gateway API 컨테이너 로그: `/var/log/pods/*/gateway-api*/*.log`
+
+**파싱 기능**:
+1. **CRI 로그 포맷 파싱**: Kubernetes CRI 표준 포맷 처리
+   ```
+   2024-01-15T10:30:45.123456789Z stdout F {"level":"info","msg":"Request processed"}
+   ```
+
+2. **JSON 로그 자동 파싱**: logrus 등의 JSON 구조화 로그 파싱
+   - `level` 필드를 severity로 자동 변환
+   - `msg` 필드를 로그 body로 이동
+   - 타임스탬프 자동 추출
+
+3. **Severity 레벨 매핑**:
+   - `debug` → DEBUG
+   - `info` → INFO
+   - `warn`, `warning` → WARN
+   - `error` → ERROR
+   - `fatal`, `panic` → FATAL
+
+4. **불필요한 필드 제거**: CRI 메타데이터 자동 정리
+
+**로그 수집 설정**:
+- `start_at: end`: 새로운 로그만 수집 (과거 로그 제외)
+- `include_file_path: true`: 로그 파일 경로 포함
+- Health check 엔드포인트 자동 필터링
+
+### 8. 디버깅 및 관측성
+개발 및 트러블슈팅을 위한 기능:
+
+**텔레메트리 로그 레벨**: `debug`
+- Collector 자체의 내부 동작을 상세히 기록
+- Receiver, Processor, Exporter의 동작 로그 출력
+- 데이터 처리 흐름 추적 가능
+
+**Debug Exporter**: `verbosity: detailed`
+- 수집된 모든 데이터를 콘솔에 출력
+- 데이터 구조 및 속성 확인 가능
+- `logs/debugging` 파이프라인에서 사용
+
+**Prometheus Self-Metrics**: `0.0.0.0:8889`
+- Collector 자체의 메트릭 노출
+- 처리량, 에러율, 큐 상태 등 모니터링
+- Grafana 대시보드로 Collector 성능 추적 가능
+
 ## AWS 통합
 
 ### IRSA (IAM Roles for Service Accounts)
@@ -329,6 +399,80 @@ https://xray.ap-northeast-2.amazonaws.com
 - 커스텀 애플리케이션 메트릭
 
 ## 트러블슈팅
+
+### 로그 수집 문제 해결
+
+#### 로그가 수집되지 않는 경우
+```bash
+# filelog receiver 로그 확인
+kubectl logs -n otel-collector -l app.kubernetes.io/name=otel-collector | grep -i filelog
+
+# 로그 파일 경로 확인 (Pod 내부)
+kubectl exec -n otel-collector <pod-name> -- ls -la /var/log/pods/
+
+# gateway-api 로그 파일 확인
+kubectl exec -n otel-collector <pod-name> -- find /var/log/pods -name "*gateway-api*" -type f
+
+# 볼륨 마운트 확인
+kubectl get pods -n otel-collector <pod-name> -o jsonpath='{.spec.volumes[?(@.name=="varlogpods")]}'
+```
+
+#### 로그 파싱 문제
+```bash
+# 로그 파이프라인 상태 확인
+kubectl logs -n otel-collector <pod-name> | grep -i "logs/otel\|logs/debugging"
+
+# JSON 파싱 에러 확인
+kubectl logs -n otel-collector <pod-name> | grep -i "json_parser\|regex_parser"
+
+# Debug exporter로 원본 로그 확인 (logs/debugging 파이프라인)
+kubectl logs -n otel-collector <pod-name> | grep -A 20 "LogRecord"
+```
+
+#### CloudWatch Logs 전송 문제
+```bash
+# CloudWatch Logs exporter 로그 확인
+kubectl logs -n otel-collector <pod-name> | grep -i cloudwatch
+
+# AWS 인증 확인
+kubectl logs -n otel-collector <pod-name> | grep -i "awscloudwatchlogs\|credential"
+
+# IAM 권한 확인 필요
+# - logs:CreateLogGroup
+# - logs:CreateLogStream
+# - logs:PutLogEvents
+```
+
+### 디버깅 레벨 조정
+
+현재 로그 레벨: **debug** (가장 상세한 레벨)
+
+**로그 레벨 변경 방법**:
+```yaml
+service:
+  telemetry:
+    logs:
+      level: "info"  # debug → info로 변경 (프로덕션 권장)
+```
+
+**사용 가능한 로그 레벨**:
+- `debug`: 모든 디버그 정보 포함 (개발/트러블슈팅용)
+- `info`: 일반 정보 로그 (프로덕션 권장)
+- `warn`: 경고 이상만 기록
+- `error`: 에러만 기록
+
+**권장사항**:
+- 개발/테스트 환경: `debug` (현재 설정)
+- 프로덕션 환경: `info` (성능 최적화)
+
+**Debug Exporter 비활성화** (프로덕션 환경):
+```yaml
+# logs/debugging 파이프라인 주석 처리
+# logs/debugging:
+#   receivers: [otlp]
+#   processors: [filter/healthcheck, k8sattributes]
+#   exporters: [debug]
+```
 
 ### Collector Pod가 시작하지 않는 경우
 ```bash
@@ -392,6 +536,7 @@ kubectl get pods -n otel-collector <pod-name> -o jsonpath='{.spec.containers[0].
 다음 항목들을 일관되게 변경해야 합니다:
 - `awsxray.region`
 - `awscloudwatchlogs.region`
+- `awscloudwatchlogs.endpoint`
 - `prometheusremotewrite.endpoint`
 - `sigv4auth.assume_role.sts_region`
 
@@ -401,10 +546,48 @@ kubectl get pods -n otel-collector <pod-name> -o jsonpath='{.spec.containers[0].
 - `otel-collector-daemonset.yaml`의 `AWS_ROLE_ARN` 환경 변수
 - `otel-collector-daemonset.yaml`의 `sigv4auth.assume_role.arn`
 
+**CloudWatch Logs 권한 추가 필요**:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogStreams"
+      ],
+      "Resource": "arn:aws:logs:ap-northeast-2:*:log-group:/aws/otel/tacos-logs:*"
+    }
+  ]
+}
+```
+
 ### 3. AMP Workspace 변경
 `prometheusremotewrite.endpoint`의 Workspace ID를 변경해야 합니다.
 
-### 4. Prometheus CRD 활성화/비활성화
+### 4. CloudWatch Logs 설정 변경
+로그 그룹 및 보관 기간 변경:
+```yaml
+awscloudwatchlogs:
+  log_group_name: "/aws/otel/tacos-logs"  # 로그 그룹명 변경
+  log_stream_name: "otel-logs"            # 로그 스트림명 변경
+  log_retention: 365                       # 보관 기간 (일)
+```
+
+### 5. 로그 수집 대상 변경
+다른 애플리케이션의 로그를 수집하려면:
+```yaml
+filelog:
+  include:
+    - /var/log/pods/*/gateway-api*/*.log      # gateway-api
+    - /var/log/pods/*/reservation-api*/*.log  # reservation-api 추가
+    - /var/log/pods/*/payment-sim-api*/*.log  # payment-sim-api 추가
+```
+
+### 6. Prometheus CRD 활성화/비활성화
 **prometheusCR을 활성화**하는 경우:
 - Prometheus Operator의 CRD (ServiceMonitor/PodMonitor)가 클러스터에 설치되어 있어야 함 
 - Target Allocator가 이러한 리소스를 자동으로 검색하여 타겟 생성
