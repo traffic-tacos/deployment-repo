@@ -6,6 +6,7 @@ metadata:
   namespace: otel-collector
 spec:
   mode: statefulset
+  replicas: 2
   serviceAccount: otel-collector-sa
   affinity:
     podAntiAffinity:

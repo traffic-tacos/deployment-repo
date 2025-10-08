@@ -212,6 +212,31 @@ targetAllocator:
     enabled: true  # ServiceMonitor/PodMonitor 자동 검색 활성화
 ```
 
+**사전 요구사항 - Prometheus Operator CRD 설치**:
+
+Prometheus Operator의 CRD가 필요합니다. Prometheus Operator 전체를 설치하지 않고 CRD만 설치할 수 있습니다:
+
+```bash
+# 네임스페이스 생성
+kubectl create namespace prometheus-crds
+
+# Prometheus Operator CRD만 설치 (권장)
+helm install prometheus-operator-crds \
+  oci://ghcr.io/prometheus-community/charts/prometheus-operator-crds \
+  --namespace prometheus-crds
+
+# 설치 확인
+kubectl get crd | grep monitoring.coreos.com
+```
+
+이 명령으로 다음 CRD들이 설치됩니다:
+- `servicemonitors.monitoring.coreos.com`
+- `podmonitors.monitoring.coreos.com`
+- `prometheusrules.monitoring.coreos.com`
+- `probes.monitoring.coreos.com`
+
+> **참고**: Prometheus Operator CRD만 설치하면 Prometheus Operator 자체는 설치되지 않습니다. OpenTelemetry Collector의 Target Allocator가 이 CRD를 읽어서 타겟을 자동으로 검색합니다.
+
 **작동 방식**:
 1. Target Allocator가 클러스터 내 ServiceMonitor/PodMonitor CRD를 모니터링
 2. CRD에 정의된 selector와 매칭되는 Service/Pod 자동 검색
@@ -381,7 +406,7 @@ kubectl get pods -n otel-collector <pod-name> -o jsonpath='{.spec.containers[0].
 
 ### 4. Prometheus CRD 활성화/비활성화
 **prometheusCR을 활성화**하는 경우:
-- Prometheus Operator의 CRD (ServiceMonitor/PodMonitor)가 클러스터에 설치되어 있어야 함
+- Prometheus Operator의 CRD (ServiceMonitor/PodMonitor)가 클러스터에 설치되어 있어야 함 
 - Target Allocator가 이러한 리소스를 자동으로 검색하여 타겟 생성
 - 수동 `scrape_configs` 설정 불필요
 
