@@ -45,7 +45,7 @@ data:
             testid: __ENV.TEST_ID,
             pod: __ENV.POD_NAME
         },
-        systemTags: ['status', 'method', 'scenario', 'expected_response', 'pod'], //url, name 제거
+        systemTags: ['status', 'method', 'scenario', 'expected_response', 'pod', 'vu'],
         scenarios: {
             ticket_click_once: {
                 executor: 'per-vu-iterations',  // 각 VU가 1회 실행 후 종료
