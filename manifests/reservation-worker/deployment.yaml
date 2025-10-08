@@ -56,35 +56,63 @@ spec:
         operator: Exists
         effect: NoSchedule
       
+      serviceAccountName: reservation-worker-sa
+      
       containers:
       - name: reservation-worker
         image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-reservation-worker:59fe460
         imagePullPolicy: Always
         
         ports:
-        - name: http
-          containerPort: 8080
+        - name: http-metrics
+          containerPort: 8040
+          protocol: TCP
+        - name: grpc-debug
+          containerPort: 8041
           protocol: TCP
         
         env:
-        - name: PORT
-          value: "8080"
+        # AWS Configuration (IRSA를 통해 자동 인증)
         - name: AWS_REGION
           value: ap-northeast-2
-        - name: REDIS_ADDRESS
-          value: clustercfg.traffic-tacos-redis.w6eqga.apn2.cache.amazonaws.com:6379
+        
+        # SQS Configuration
         - name: SQS_QUEUE_URL
           value: https://sqs.ap-northeast-2.amazonaws.com/137406935518/traffic-tacos-reservation-events
+        - name: SQS_WAIT_TIME
+          value: "20"
+        - name: SQS_REGION
+          value: ap-northeast-2
+        
+        # Worker Configuration
+        - name: WORKER_CONCURRENCY
+          value: "20"
+        - name: MAX_RETRIES
+          value: "5"
+        - name: BACKOFF_BASE_MS
+          value: "1000"
+        
+        # External Services
         - name: INVENTORY_GRPC_ADDR
-          value: inventory-api:8020
+          value: inventory-api:8021
         - name: RESERVATION_API_BASE
           value: http://reservation-api:8010
+        
+        # Observability
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: "otel-collector-collector.otel-collector:4317"
         - name: OTEL_EXPORTER_OTLP_PROTOCOL
           value: "grpc"
         - name: OTEL_EXPORTER_OTLP_INSECURE
           value: "true"
+        - name: LOG_LEVEL
+          value: "info"
+        
+        # Server Configuration
+        - name: SERVER_PORT
+          value: "8040"
+        - name: GRPC_DEBUG_PORT
+          value: "8041"
         resources:
           requests:
             cpu: 250m
@@ -94,16 +122,18 @@ spec:
             memory: 512Mi
         
         livenessProbe:
-          tcpSocket:
-            port: 8080
+          httpGet:
+            path: /health
+            port: 8040
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
         
         readinessProbe:
-          tcpSocket:
-            port: 8080
+          httpGet:
+            path: /ready
+            port: 8040
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 3
