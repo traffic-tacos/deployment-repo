@@ -49,7 +49,7 @@ data:
         scenarios: {
             ticket_click_once: {
                 executor: 'per-vu-iterations',  // 각 VU가 1회 실행 후 종료
-                vus: 10000,
+                vus: 30000,
                 iterations: 1,
                 maxDuration: '5m',              // 테스트 종료 시간    
                 startTime: '0s',
@@ -141,7 +141,6 @@ data:
 
     // 공통 함수: 시스템 진입 /queue/enter
     function enterSystem(waiting_token) {
-        console.log("/queue/enter start1");
         const enterRes = http.post(
             `${BASE_URL}${API_PREFIX}/queue/enter`,
             JSON.stringify({ waiting_token }),
