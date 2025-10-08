@@ -1,16 +1,16 @@
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
+  name: on-demand-critical
   labels:
     capacity-preference: on-demand
     node-type: on-demand
     workload-type: critical
-  name: on-demand-critical
 spec:
   disruption:
     budgets:
     - nodes: 20%
-    consolidateAfter: 5m
+    consolidateAfter: 1m      
     consolidationPolicy: WhenEmpty
   limits:
     cpu: "300"
@@ -47,11 +47,16 @@ spec:
       - key: karpenter.k8s.aws/instance-size
         operator: In
         values:
-        - medium
-        - large
-        - xlarge
-      startupTaints:
-      - effect: NoSchedule
-        key: node.karpenter.sh/initializing
-        value: "true"
+        - large     
+        - xlarge   
+        - 2xlarge
+
+      # startupTaints:
+      # - key: node.karpenter.sh/initializing
+      #   value: "true"
+      #   effect: NoSchedule
+
+  ttlSecondsUntilExpired: 30       
+  consolidation:
+    enabled: true             
   weight: 50
