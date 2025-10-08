@@ -98,7 +98,7 @@ spec:
             value: "true"
           # 🔴 Redis connection pool optimization for 30k RPS
           - name: REDIS_POOL_SIZE
-            value: "1000"
+            value: "200"
           - name: REDIS_POOL_TIMEOUT
             value: "10s"
           - name: REDIS_MIN_IDLE_CONNS
