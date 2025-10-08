@@ -52,6 +52,19 @@ spec:
                   values:
                   - gateway-api
               topologyKey: kubernetes.io/hostname
+        topologySpreadConstraints:
+          - maxSkew: 2
+            topologyKey: topology.kubernetes.io/zone
+            whenUnsatisfiable: ScheduleAnyway
+            labelSelector:
+              matchLabels:
+                app: gateway-api
+          - maxSkew: 1
+            topologyKey: kubernetes.io/hostname
+            whenUnsatisfiable: ScheduleAnyway
+            labelSelector:
+              matchLabels:
+                app: gateway-api
       
       tolerations:
       - key: node.karpenter.sh/initializing
@@ -201,7 +214,7 @@ spec:
               port: 8000
             initialDelaySeconds: 30
             periodSeconds: 5
-            failureThreshold: 30  
+            failureThreshold: 15
           livenessProbe:
             httpGet:
               path: /healthz
