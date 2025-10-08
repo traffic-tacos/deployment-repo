@@ -121,14 +121,30 @@ spec:
           value: "http/protobuf"
         - name: OTEL_EXPORTER_OTLP_INSECURE
           value: "true"
+        
+        # JVM Memory Optimization (Fix memory leak/GC issues)
+        - name: JAVA_OPTS
+          value: >-
+            -javaagent:/app/opentelemetry-javaagent.jar
+            -Xms512m
+            -Xmx512m
+            -XX:+UseG1GC
+            -XX:MaxGCPauseMillis=200
+            -XX:+UseStringDeduplication
+            -XX:MaxMetaspaceSize=128m
+            -XX:+HeapDumpOnOutOfMemoryError
+            -XX:HeapDumpPath=/tmp/heapdump.hprof
+            -XX:+ExitOnOutOfMemoryError
+            -Xlog:gc*=info,gc+heap=debug,safepoint=info:stdout:time,uptime,level,tags
+            -Djava.security.egd=file:/dev/./urandom
 
         resources:
           requests:
             cpu: 100m
-            memory: 512Mi
+            memory: 768Mi
           limits:
             cpu: 500m
-            memory: 768Mi
+            memory: 1024Mi
         
         livenessProbe:
           httpGet:
