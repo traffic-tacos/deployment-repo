@@ -13,10 +13,16 @@ spec:
   tolerations:
   - operator: "Exists"
   volumeMounts:
+  - name: varlogpods
+    mountPath: /var/log/pods
+    readOnly: true
   - name: aws-iam-token
     mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
     readOnly: true
   volumes:
+  - name: varlogpods
+    hostPath:
+      path: /var/log/pods
   - name: aws-iam-token
     projected:
       defaultMode: 420
@@ -63,6 +69,58 @@ spec:
             endpoint: 0.0.0.0:4317
           http:
             endpoint: 0.0.0.0:4318
+      
+      # Kubernetes 컨테이너 로그 수집
+      filelog:
+        include:
+          - /var/log/pods/*/gateway-api*/*.log
+        start_at: end
+        include_file_path: true
+        include_file_name: false
+        operators:
+          # Kubernetes CRI 로그 포맷 파싱
+          - type: regex_parser
+            id: parser-cri
+            regex: '^(?P<time>[^\s]+) (?P<stream>stdout|stderr) (?P<logtag>[^\s]+) (?P<log>.*)$'
+            timestamp:
+              parse_from: attributes.time
+              layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+          
+          # JSON 로그 파싱 (logrus)
+          - type: json_parser
+            id: parser-json
+            parse_from: attributes.log
+            parse_to: attributes
+            if: 'attributes.log matches "^\\{"'
+          
+          # Severity 파싱
+          - type: severity_parser
+            parse_from: attributes.level
+            if: 'attributes.level != nil'
+            mapping:
+              debug: debug
+              info: info
+              warn: warn
+              warning: warn
+              error: error
+              fatal: fatal
+              panic: fatal
+          
+          # Message를 body로 이동
+          - type: move
+            from: attributes.msg
+            to: body
+            if: 'attributes.msg != nil'
+          
+          # 불필요한 필드 제거
+          - type: remove
+            field: attributes.time
+          - type: remove
+            field: attributes.stream
+          - type: remove
+            field: attributes.logtag
+          - type: remove
+            field: attributes.log
     processors:
       filter/healthcheck:
         traces:
@@ -146,7 +204,7 @@ spec:
           level: "debug"
       pipelines:
         logs/otel:
-          receivers: [otlp]
+          receivers: [otlp, filelog]
           processors: [filter/healthcheck, k8sattributes, batch]
           exporters: [awscloudwatchlogs]
         logs/debugging:
