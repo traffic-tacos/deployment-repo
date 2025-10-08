@@ -132,12 +132,21 @@ spec:
             value: "10000"
           - name: RATE_LIMIT_BURST
             value: "15000"
+            # OTEL 
           - name: OTEL_EXPORTER_OTLP_ENDPOINT
             value: "otel-collector-collector.otel-collector:4317"
           - name: OTEL_EXPORTER_OTLP_PROTOCOL
             value: "grpc"
           - name: OTEL_EXPORTER_OTLP_INSECURE
             value: "true"
+          - name: OBSERVABILITY_OTLP_ENDPOINT
+            value: "otel-collector-collector.otel-collector.svc.cluster.local:4318"
+          - name: OBSERVABILITY_TRACING_ENABLED
+            value: "true"
+          - name: OBSERVABILITY_SAMPLE_RATE
+            value: "0.1"  # 10% sampling for production
+          - name: OBSERVABILITY_METRICS_PATH
+            value: "/metrics"
           - name: CORS_ALLOW_ORIGINS
             value: "https://www.traffictacos.store,https://traffictacos.store,https://api.traffictacos.store"
           
