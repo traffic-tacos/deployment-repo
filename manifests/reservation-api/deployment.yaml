@@ -56,6 +56,8 @@ spec:
         operator: Exists
         effect: NoSchedule
       
+      serviceAccountName: reservation-api-sa
+      
       containers:
       - name: reservation-api
         image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-reservation-api:latest
