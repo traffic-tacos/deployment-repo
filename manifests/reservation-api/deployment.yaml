@@ -135,6 +135,14 @@ spec:
             -XX:+HeapDumpOnOutOfMemoryError
             -XX:HeapDumpPath=/tmp/heapdump.hprof
             -XX:+ExitOnOutOfMemoryError
+            -Xlog:gc*,gc+heap=trace,safepoint:stdout:time,uptime,level,tags
+            -XX:+PrintGCDetails
+            -XX:+PrintGCDateStamps
+            -XX:+PrintGCTimeStamps
+            -XX:+PrintGCCause
+            -XX:+UseGCLogFileRotation
+            -XX:NumberOfGCLogFiles=5
+            -XX:GCLogFileSize=10M
             -Djava.security.egd=file:/dev/./urandom
 
         resources:
