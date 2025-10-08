@@ -53,7 +53,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: TEST_ID
-              value: "k6-10k-20251008-006"
+              value: "k6-10k-20251008-007"
             - name: TARGET_BASE_URL
               value: "https://api.traffictacos.store"
             - name: K6_OUT
