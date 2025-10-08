@@ -60,7 +60,7 @@ spec:
       
       containers:
         - name: gateway-api
-          image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-gateway-api:a8b2e31
+          image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-gateway-api:666ede5
           imagePullPolicy: Always
           
           ports:
@@ -98,13 +98,19 @@ spec:
             value: "true"
           # 🔴 Redis connection pool optimization for 30k RPS
           - name: REDIS_POOL_SIZE
-            value: "1000"
+            value: "150"
           - name: REDIS_POOL_TIMEOUT
-            value: "10s"
+            value: "20s"
           - name: REDIS_MIN_IDLE_CONNS
-            value: "100"
+            value: "30"
           - name: REDIS_MAX_CONN_AGE
             value: "30m"
+          - name: REDIS_DIAL_TIMEOUT
+            value: "20s"
+          - name: REDIS_READ_TIMEOUT
+            value: "10s"
+          - name: REDIS_WRITE_TIMEOUT
+            value: "10s"
           - name: BACKEND_RESERVATION_API_GRPC_ADDRESS
             value: reservation-api:8011
           - name: BACKEND_PAYMENT_API_GRPC_ADDRESS
