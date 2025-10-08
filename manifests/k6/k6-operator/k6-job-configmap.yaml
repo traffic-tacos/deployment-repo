@@ -28,6 +28,18 @@ data:
         });
     }
 
+    function uuidv4WithVU() {
+        // 각 VU와 iteration을 랜덤 시드에 섞기
+        const seed = (__VU * 1e6 + Date.now() + Math.random() * 1e6).toString(16);
+
+        // UUIDv4 형식 강제
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c, i) {
+            const r = parseInt(seed.substr(i % seed.length, 1), 16) || (Math.random() * 16) | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
     export const options = {
         tags: {
             testid: __ENV.TEST_ID,
@@ -76,7 +88,7 @@ data:
             {
                 headers: {
                     ...baseHeaders,
-                    'Idempotency-Key': `${__VU}-${uuidv4()}`,
+                    'Idempotency-Key': uuidv4WithVU(),
                 },
                 tags: {
                     api: '/queue/join',
@@ -89,6 +101,7 @@ data:
             'queue join status 202': (r) => r.status === 202,
             'queue join has token': (r) => r.json('waiting_token') !== undefined,
         });
+
         queueJoinFailRate.add(!success);
         
         return success ? { waiting_token: joinRes.json('waiting_token'), userId, eventId } : null;
@@ -97,12 +110,15 @@ data:
     // 공통 함수: 대기열 상태 폴링 /queue/status?token=${waiting_token}
     function pollQueueStatus(waiting_token, maxAttempts = 10000000) {
         for (let i = 0; i < maxAttempts; i++) {
-            sleep(Math.random() * 2 + 2); // 2-4초
+            sleep(Math.random() * 2 + 2); // 2-4s
             
             const statusRes = http.get(
                 `${BASE_URL}${API_PREFIX}/queue/status?token=${waiting_token}`,
                 {
-                    tags: { 
+                    headers: {
+                        ...baseHeaders
+                    },
+                    tags: {
                         api: '/queue/status',
                     },
                 }
@@ -132,7 +148,7 @@ data:
             {
                 headers: {
                     ...baseHeaders,
-                    'Idempotency-Key': `${__VU}-${uuidv4()}`,
+                    'Idempotency-Key': uuidv4WithVU(),
                 },
                 tags: {
                     api: '/queue/enter',
