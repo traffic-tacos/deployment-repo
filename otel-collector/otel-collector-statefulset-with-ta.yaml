@@ -26,7 +26,7 @@ spec:
     enabled: true
     serviceAccount: otel-collector-with-ta-targetallocator
     prometheusCR:
-      enabled: false
+      enabled: true
   config: |
     receivers:
       # Kubernetes 클러스터 리소스 메트릭 (Pods, Deployments, Services 등)
