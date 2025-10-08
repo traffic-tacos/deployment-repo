@@ -123,8 +123,9 @@ spec:
           value: "true"
         
         # JVM Memory Optimization (Fix memory leak/GC issues)
-        - name: JAVA_TOOL_OPTIONS
+        - name: JAVA_OPTS
           value: >-
+            -javaagent:/app/opentelemetry-javaagent.jar
             -Xms512m
             -Xmx512m
             -XX:+UseG1GC
