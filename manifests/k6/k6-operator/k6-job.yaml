@@ -68,11 +68,11 @@ spec:
               value: "10s"
           resources:
             requests:
+              cpu: "4"
+              memory: "8Gi"
+            limits:
               cpu: "8"
               memory: "12Gi"
-            limits:
-              cpu: "10"
-              memory: "16Gi"
         - name: aws-sigv4-proxy
           image: public.ecr.aws/aws-observability/aws-sigv4-proxy:latest
           args:
