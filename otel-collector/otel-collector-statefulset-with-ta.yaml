@@ -50,6 +50,12 @@ spec:
             - action: labelmap
               regex: label_(.+)
               replacement: $$1
+          - job_name: 'karpenter'
+            static_configs:
+            - targets: ['karpenter.karpenter.svc.cluster.local:8080'] 
+            metrics_path: /metrics
+            scheme: http
+            scrape_interval: 15s
           - job_name: 'prometheus-node-exporter-pods'
             scrape_interval: 15s
             static_configs:
