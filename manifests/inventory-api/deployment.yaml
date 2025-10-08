@@ -10,7 +10,7 @@ metadata:
     app.kubernetes.io/name: inventory-api
     app.kubernetes.io/part-of: traffic-tacos
 spec:
-  replicas: 2
+  replicas: 8
   revisionHistoryLimit: 3
   selector:
     matchLabels:

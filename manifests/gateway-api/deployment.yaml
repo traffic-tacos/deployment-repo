@@ -189,25 +189,32 @@ spec:
             limits:
               cpu: 1200m
               memory: 1Gi
-          
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            failureThreshold: 30  
           livenessProbe:
             httpGet:
               path: /healthz
               port: 8000
-            initialDelaySeconds: 30
-            periodSeconds: 10
+            initialDelaySeconds: 10
+            periodSeconds: 5
             timeoutSeconds: 5
-            failureThreshold: 3
+            successThreshold: 1
+            failureThreshold: 6
           
           readinessProbe:
             httpGet:
               path: /readyz
               port: 8000
-            initialDelaySeconds: 15    # 🔴 5 → 15: Redis Cluster 연결 대기
-            periodSeconds: 5           # 🔴 3 → 5: 체크 간격 완화
-            timeoutSeconds: 3          # 🔴 2 → 3: 응답 대기 시간 증가
-            successThreshold: 1        # ✅ 유지: 1번 성공하면 Ready
-            failureThreshold: 3        # 🔴 2 → 3: 실패 허용 횟수 증가
+            initialDelaySeconds: 10    
+            periodSeconds: 5           
+            timeoutSeconds: 3         
+            successThreshold: 1      
+            failureThreshold: 6       
           
           volumeMounts:
           - name: aws-iam-token
