@@ -60,7 +60,7 @@ spec:
       
       containers:
         - name: gateway-api
-          image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-gateway-api:1b3087f
+          image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-gateway-api:f473d91
           imagePullPolicy: Always
           
           ports:
