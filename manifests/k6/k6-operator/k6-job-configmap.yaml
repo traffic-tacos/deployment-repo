@@ -35,12 +35,14 @@ data:
         },
         systemTags: ['status', 'method', 'scenario', 'expected_response', 'pod'], //url, name 제거
         scenarios: {
-            full_success_flow: {
+            ticket_click_once: {
                 executor: 'per-vu-iterations',  // 각 VU가 1회 실행 후 종료
-                vus: 10000,
+                vus: 5000,
                 iterations: 1,
-                maxDuration: '5m',
-                exec: 'fullScenario'
+                maxDuration: '5m',              // 테스트 종료 시간    
+                startTime: '0s',
+                exec: 'fullScenario',
+                gracefulStop: '5s',             // 시나리오 종료 후 실행 중인 요청들
             },
         },
         thresholds: {
