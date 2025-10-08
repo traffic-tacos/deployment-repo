@@ -49,7 +49,7 @@ data:
         scenarios: {
             ticket_click_once: {
                 executor: 'per-vu-iterations',  // 각 VU가 1회 실행 후 종료
-                vus: 5000,
+                vus: 10000,
                 iterations: 1,
                 maxDuration: '5m',              // 테스트 종료 시간    
                 startTime: '0s',
@@ -108,7 +108,7 @@ data:
     }
 
     // 공통 함수: 대기열 상태 폴링 /queue/status?token=${waiting_token}
-    function pollQueueStatus(waiting_token, maxAttempts = 10000000) {
+    function pollQueueStatus(waiting_token, maxAttempts = 100000) {
         for (let i = 0; i < maxAttempts; i++) {
             sleep(Math.random() * 2 + 2); // 2-4s
             
