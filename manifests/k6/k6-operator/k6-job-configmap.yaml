@@ -90,8 +90,8 @@ data:
             'queue join has token': (r) => r.json('waiting_token') !== undefined,
         });
 
-        if(statusRes.json('status') != 202)
-            console.log(statusRes.json('status'), waiting_token);
+        if(joinRes.json('status') != 202)
+            console.log(joinRes.json('status'), waiting_token);
 
         queueJoinFailRate.add(!success);
         
