@@ -1,0 +1,197 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k6-cm-prod
+  namespace: load-test
+  labels:
+    app: k6-operator
+data:
+  script.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+    import { Rate, Counter } from 'k6/metrics';
+
+    // Custom Metric
+    const totalFlows = new Counter('api_count');
+    const queueJoinFailRate = new Rate('queue_join_fail');
+    const queueStatusFailRate = new Rate('queue_status_fail');
+    const queueEnterFailRate = new Rate('queue_enter_fail');
+    const reservationFailRate = new Rate('reservation_fail');
+    const paymentFailRate = new Rate('payment_fail');
+    const completedFlows = new Counter('api_success');
+
+    function uuidv4() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    function uuidv4WithVU(userId) {
+        const seed = `${userId}-${Math.random().toString(16).slice(2)}`
+                    .split('')
+                    .reduce((acc, c) => acc + c.charCodeAt(0).toString(16), '');
+
+        // UUIDv4 형식 강제
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c, i) {
+            const r = parseInt(seed.charAt(i % seed.length), 16) || (Math.random() * 16) | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    export const options = {
+        tags: {
+            testid: __ENV.TEST_ID,
+            pod: __ENV.POD_NAME
+        },
+        systemTags: ['status', 'method', 'scenario', 'expected_response', 'pod'],
+        scenarios: {
+            ticket_click_once: {
+                executor: 'per-vu-iterations',  // 각 VU가 1회 실행 후 종료
+                vus: 10000,
+                iterations: 1,
+                maxDuration: '5m',              // 테스트 종료 시간    
+                startTime: '0s',
+                exec: 'fullScenario',
+                gracefulStop: '5s',             // 시나리오 종료 후 실행 중인 요청들
+            },
+        },
+        thresholds: {
+            http_req_duration: ['p(95)<5000', 'p(99)<7000'],
+            http_req_failed: ['rate<0.1'],
+            queue_join_fail: ['rate<0.05'],
+            queue_status_fail: ['rate<0.2'],
+            queue_enter_fail: ['rate<0.2'],
+        }
+    };
+
+    const BASE_URL = __ENV.TARGET_BASE_URL;
+    const POD_NAME = __ENV.POD_NAME;
+    const API_PREFIX = '/api/v1';
+
+    const baseHeaders = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'k6-load-test/1.0'
+    };
+
+    // 공통 함수: 대기열 진입 /queue/join
+    function joinQueue(userId) {
+        const eventId = `evt_${Math.floor(Math.random() * 100) + 1}`;
+        
+        const joinRes = http.post(
+            `${BASE_URL}${API_PREFIX}/queue/join`,
+            JSON.stringify({
+                user_id: userId,
+                event_id: eventId,
+            }),
+            {
+                headers: {
+                    ...baseHeaders,
+                    'Idempotency-Key': uuidv4WithVU(userId),
+                },
+                tags: {
+                    api: '/queue/join'
+                },
+                timeout: '300s'
+            }
+        );
+        
+        const success = check(joinRes, {
+            'queue join status 202': (r) => r.status === 202,
+            'queue join has token': (r) => r.json('waiting_token') !== undefined,
+        });
+
+        queueJoinFailRate.add(!success);
+        
+        if(joinRes.json('waiting_token') == undefined)
+            console.log(userId, joinRes.json('waiting_token'));
+
+        return success ? { waiting_token: joinRes.json('waiting_token'), userId, eventId } : null;
+    }
+
+    // 공통 함수: 대기열 상태 폴링 /queue/status?token=${waiting_token}
+    function pollQueueStatus(userId, waiting_token, maxAttempts = 1000000) {
+        for (let i = 0; i < maxAttempts; i++) {
+            sleep(Math.random() * 2 + 2); // 2-4s
+            
+            const statusRes = http.get(
+                `${BASE_URL}${API_PREFIX}/queue/status?token=${waiting_token}`,
+                {
+                    headers: {
+                        ...baseHeaders
+                    },
+                    tags: {
+                        api: '/queue/status'
+                    },
+                }
+            );
+
+            if (statusRes.status === 200) {
+                if (statusRes.json('ready_for_entry') === true) {
+                    return true;
+                }
+                else
+                {
+                    if (statusRes.json('position') < 10) {
+                        console.log(userId, waiting_token, statusRes.json('position'));
+                    }
+                }
+            }
+            else
+            {
+                queueStatusFailRate.add(false);
+            }
+        }
+        queueStatusFailRate.add(false);
+        return false;
+    }
+
+    // 공통 함수: 시스템 진입 /queue/enter
+    function enterSystem(userId, waiting_token) {
+
+        const enterRes = http.post(
+            `${BASE_URL}${API_PREFIX}/queue/enter`,
+            JSON.stringify({ waiting_token }),
+            {
+                headers: {
+                    ...baseHeaders,
+                    'Idempotency-Key': uuidv4WithVU(userId),
+                },
+                tags: {
+                    api: '/queue/enter'
+                },
+            }
+        );
+
+        const success = check(enterRes, {
+            'queue enter status 200': (r) => r.status === 200,
+            'queue enter has reservation token': (r) => r.json('reservation_token') !== undefined,
+        });
+
+        queueEnterFailRate.add(!success);
+        
+        if(enterRes.json('reservation_token') == undefined)
+            console.log(userId, enterRes.json('reservation_token'));
+
+        return success ? enterRes.json('reservation_token') : null;
+    }
+
+    export function fullScenario() {
+        totalFlows.add(1);
+        const userId = `u${POD_NAME.slice(-2)}-${__VU}`;
+
+        const queueData = joinQueue(userId);
+        if (!queueData) return;
+
+        const ready = pollQueueStatus(userId, queueData.waiting_token);
+        if (!ready) return;
+        
+        const accessToken = enterSystem(userId, queueData.waiting_token);
+        
+        if (accessToken)
+            completedFlows.add(1);
+        else
+            return;
+    }

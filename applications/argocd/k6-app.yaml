@@ -15,7 +15,7 @@ spec:
   source:
     repoURL: https://github.com/traffic-tacos/deployment-repo
     targetRevision: main
-    path: manifests/k6/k6-operator
+    path: manifests/k6/k6-job
   
   destination:
     server: https://kubernetes.default.svc
