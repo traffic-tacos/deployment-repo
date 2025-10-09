@@ -215,7 +215,9 @@ spec:
             initialDelaySeconds: 60     # ⬆️ 30s → 60s (Redis 연결 충분한 대기)
             periodSeconds: 10           # ⬆️ 5s → 10s (체크 간격 증가)
             timeoutSeconds: 10          # ✅ NEW (타임아웃 명시)
-            failureThreshold: 30        # 30번 실패 허용 (총 6분 대기)          livenessProbe:
+            failureThreshold: 30        # 30번 실패 허용 (총 6분 대기)
+          
+          livenessProbe:
             httpGet:
               path: /healthz
               port: 8000
