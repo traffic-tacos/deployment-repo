@@ -8,7 +8,7 @@
 [![ArgoCD](https://img.shields.io/badge/ArgoCD-GitOps-EF7B4D?logo=argo&logoColor=white)](https://argo-cd.readthedocs.io/)
 [![Karpenter](https://img.shields.io/badge/Karpenter-AutoScaling-00ADD8?logo=kubernetes&logoColor=white)](https://karpenter.sh/)
 [![AWS EKS](https://img.shields.io/badge/AWS-EKS-FF9900?logo=amazon-aws&logoColor=white)](https://aws.amazon.com/eks/)
-[![Gateway API](https://img.shields.io/badge/Gateway-API-v1.2-326CE5)](https://gateway-api.sigs.k8s.io/)
+[![Gateway API](https://img.shields.io/badge/Gateway%20API-v1.2-326CE5)](https://gateway-api.sigs.k8s.io/)
 
 *30,000 RPS 트래픽을 처리하는 대규모 이벤트 티켓팅 시스템의 배포 및 운영 자동화*
 
