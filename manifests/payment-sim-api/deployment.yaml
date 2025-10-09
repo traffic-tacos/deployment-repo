@@ -58,7 +58,7 @@ spec:
       
       containers:
       - name: payment-sim-api
-        image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-payment-sim-api:latest
+        image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-payment-sim-api:c247265
         imagePullPolicy: Always
         
         ports:
