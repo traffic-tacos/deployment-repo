@@ -1,0 +1,65 @@
+global:
+  grafana:
+    enabled: false
+    domainName: "https://g-0bbf7d3778.grafana-workspace.ap-northeast-2.amazonaws.com/"
+    proxy: false
+prometheus:
+  server:
+    prometheusServerEndpoint: "https://aps-workspaces.ap-northeast-2.amazonaws.com/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1"
+
+    global:
+      external_labels:
+        cluster_id: "ticket-cluster"
+    remoteWrite:
+      - url: https://aps-workspaces.ap-northeast-2.amazonaws.com/workspaces/ws-ec1155d6-1ea8-4822-b9e9-fdec9424dcb9/api/v1/remote_write
+        sigv4:
+          region: ap-northeast-2
+        queue_config:
+          max_samples_per_send: 1000
+          max_shards: 200
+          capacity: 2500
+    
+    persistentVolume:
+      size: 32Gi
+      storageClass: "gp2"
+    
+    affinity: {}
+    tolerations:
+      - key: "workload"
+        operator: "Equal"
+        value: "monitoring"
+        effect: "NoSchedule"
+  nodeExporter:
+    enabled: false
+  serviceAccounts:
+    server:
+      create: false
+      name: kubecost-prometheus-server
+kubecostProductConfigs:
+  clusterName: "ticket-cluster"
+service:
+  type: ClusterIP
+  port: 9090
+ingress:
+  enabled: false
+persistentVolume:
+  storageClass: "gp2"
+  size: 32Gi
+tolerations:
+  - key: "workload"
+    operator: "Equal"
+    value: "loadtest"
+    effect: "NoSchedule"
+  - key: "workload"
+    operator: "Equal"
+    value: "monitoring"
+    effect: "NoSchedule"
+nodeSelector: {}
+affinity: {}
+resources:
+  requests:
+    cpu: "200m"
+    memory: "512Mi"
+  limits:
+    cpu: "1000m"
+    memory: "2Gi"
