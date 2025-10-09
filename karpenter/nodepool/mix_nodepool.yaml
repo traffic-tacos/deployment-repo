@@ -10,7 +10,7 @@ spec:
   disruption:
     budgets:
     - nodes: 10%
-    consolidateAfter: 30s
+    consolidateAfter: 1m
     consolidationPolicy: WhenEmptyOrUnderutilized
   limits:
     cpu: "100"
@@ -29,8 +29,7 @@ spec:
       requirements:
       - key: karpenter.sh/capacity-type
         operator: In
-        values:
-        - spot
+        values: ["spot","on-demand"]
       - key: kubernetes.io/arch
         operator: In
         values:
@@ -54,5 +53,5 @@ spec:
       - effect: NoSchedule
         key: node.karpenter.sh/initializing
         value: "true"
-
-~             
+  consolidation:
+    enabled: true             

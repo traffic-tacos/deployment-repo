@@ -49,7 +49,7 @@ On-Demand와 Spot 인스턴스를 효율적으로 조합하여 비용 최적화�
 | NodePool | 용도 | 인스턴스 타입 | 비용 전략 |
 |----------|------|--------------|----------|
 | **on-demand-critical** | 중요 워크로드 | On-Demand | 안정성 우선 |
-| **mixed-workload** | 일반 워크로드 | Spot | 비용 최적화 |
+| **mixed-workload** | 일반 워크로드 | Spot + On-Demand | 비용 최적화 |
 | **loadtest** | 부하 테스트 | Spot | 비용 최소화 |
 
 ## 🎯 NodePool 전략
@@ -66,6 +66,7 @@ On-Demand와 Spot 인스턴스를 효율적으로 조합하여 비용 최적화�
 
 **특징**:
 - 💰 Spot 인스턴스 사용 (최대 90% 비용 절감)
+- 💰 on-demand fallback 포함
 - 💰 빠른 통합 (30초 대기 후)
 
 ### 3. loadtest (부하 테스트 전용)

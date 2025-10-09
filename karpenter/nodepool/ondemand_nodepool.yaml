@@ -50,12 +50,9 @@ spec:
         - large     
         - xlarge   
         - 2xlarge
-
-      # startupTaints:
-      # - key: node.karpenter.sh/initializing
-      #   value: "true"
-      #   effect: NoSchedule
-
-  ttlSecondsUntilExpired: 30       
+      startupTaints:
+      - key: node.karpenter.sh/initializing
+        value: "true"
+        effect: NoSchedule  
   consolidation:
     enabled: true             
