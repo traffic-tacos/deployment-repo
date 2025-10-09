@@ -368,7 +368,7 @@ deployment-repo/
 │   ├── kubecost-ingress.yaml
 │   ├── kubecost-serviceaccount.yaml
 │   └── kubecost-values.yaml
-    
+│      
 │         
 ├── otel-collector/                 # OpenTelemetry 설정
 │   ├── otel-collector-daemonset.yaml
