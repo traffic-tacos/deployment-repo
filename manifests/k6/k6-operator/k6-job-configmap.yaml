@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: k6-cm-prod
+  name: k6-cm-dev
   namespace: load-test
   labels:
     app: k6-operator
@@ -28,13 +28,14 @@ data:
         });
     }
 
-    function uuidv4WithVU() {
-        // 각 VU와 iteration을 랜덤 시드에 섞기
-        const seed = (__VU * 1e6 + Date.now() + Math.random() * 1e6).toString(16);
+    function uuidv4WithVU(userId) {
+        const seed = `${userId}-${Math.random().toString(16).slice(2)}`
+                    .split('')
+                    .reduce((acc, c) => acc + c.charCodeAt(0).toString(16), '');
 
         // UUIDv4 형식 강제
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c, i) {
-            const r = parseInt(seed.substr(i % seed.length, 1), 16) || (Math.random() * 16) | 0;
+            const r = parseInt(seed.charAt(i % seed.length), 16) || (Math.random() * 16) | 0;
             const v = c === 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
         });
@@ -45,11 +46,11 @@ data:
             testid: __ENV.TEST_ID,
             pod: __ENV.POD_NAME
         },
-        systemTags: ['status', 'method', 'scenario', 'expected_response', 'pod', 'vu'],
+        systemTags: ['status', 'method', 'scenario', 'expected_response', 'pod', 'vu', "user"],
         scenarios: {
             ticket_click_once: {
                 executor: 'per-vu-iterations',  // 각 VU가 1회 실행 후 종료
-                vus: 30000,
+                vus: 10000,
                 iterations: 1,
                 maxDuration: '5m',              // 테스트 종료 시간    
                 startTime: '0s',
@@ -67,6 +68,7 @@ data:
     };
 
     const BASE_URL = __ENV.TARGET_BASE_URL;
+    const POD_NAME = __ENV.POD_NAME;
     const API_PREFIX = '/api/v1';
 
     const baseHeaders = {
@@ -75,8 +77,7 @@ data:
     };
 
     // 공통 함수: 대기열 진입 /queue/join
-    function joinQueue() {
-        const userId = `u${uuidv4()}`;
+    function joinQueue(userId) {
         const eventId = `evt_${Math.floor(Math.random() * 100) + 1}`;
         
         const joinRes = http.post(
@@ -88,10 +89,11 @@ data:
             {
                 headers: {
                     ...baseHeaders,
-                    'Idempotency-Key': uuidv4WithVU(),
+                    'Idempotency-Key': uuidv4WithVU(userId),
                 },
                 tags: {
                     api: '/queue/join',
+                    user: userId
                 },
                 timeout: '300s'
             }
@@ -104,11 +106,14 @@ data:
 
         queueJoinFailRate.add(!success);
         
+        if(joinRes.json('waiting_token') == undefined)
+            console.log(userId, joinRes.json('waiting_token'));
+
         return success ? { waiting_token: joinRes.json('waiting_token'), userId, eventId } : null;
     }
 
     // 공통 함수: 대기열 상태 폴링 /queue/status?token=${waiting_token}
-    function pollQueueStatus(waiting_token, maxAttempts = 100000) {
+    function pollQueueStatus(userId, waiting_token, maxAttempts = 1000000) {
         for (let i = 0; i < maxAttempts; i++) {
             sleep(Math.random() * 2 + 2); // 2-4s
             
@@ -120,14 +125,20 @@ data:
                     },
                     tags: {
                         api: '/queue/status',
+                        user: userId
                     },
                 }
             );
 
             if (statusRes.status === 200) {
-                //console.log(waiting_token, statusRes.json('ready_for_entry'));
                 if (statusRes.json('ready_for_entry') === true) {
                     return true;
+                }
+                else
+                {
+                    if (statusRes.json('position') < 10) {
+                        console.log(userId, waiting_token, statusRes.json('position'));
+                    }
                 }
             }
             else
@@ -140,17 +151,19 @@ data:
     }
 
     // 공통 함수: 시스템 진입 /queue/enter
-    function enterSystem(waiting_token) {
+    function enterSystem(userId, waiting_token) {
+
         const enterRes = http.post(
             `${BASE_URL}${API_PREFIX}/queue/enter`,
             JSON.stringify({ waiting_token }),
             {
                 headers: {
                     ...baseHeaders,
-                    'Idempotency-Key': uuidv4WithVU(),
+                    'Idempotency-Key': uuidv4WithVU(userId),
                 },
                 tags: {
                     api: '/queue/enter',
+                    user: userId
                 },
             }
         );
@@ -162,18 +175,22 @@ data:
 
         queueEnterFailRate.add(!success);
         
+        if(enterRes.json('reservation_token') == undefined)
+            console.log(userId, enterRes.json('reservation_token'));
+
         return success ? enterRes.json('reservation_token') : null;
     }
 
     export function fullScenario() {
         totalFlows.add(1);
-        const queueData = joinQueue();
+        const userId = `u${POD_NAME.slice(-2)}-${__VU}`;
+        const queueData = joinQueue(userId);
         if (!queueData) return;
 
-        const ready = pollQueueStatus(queueData.waiting_token);
+        const ready = pollQueueStatus(userId, queueData.waiting_token);
         if (!ready) return;
         
-        const accessToken = enterSystem(queueData.waiting_token);
+        const accessToken = enterSystem(userId, queueData.waiting_token);
         
         if (accessToken)
             completedFlows.add(1);

@@ -1,14 +1,14 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: k6-loadtest-prod
+  name: k6-loadtest-dev
   namespace: load-test
   labels:
     app: k6
 spec:
   ttlSecondsAfterFinished: 3600
   backoffLimit: 0
-  parallelism: 1
+  parallelism: 3
   template:
     metadata:
       labels:
@@ -35,7 +35,7 @@ spec:
         - name: k6-test-volume
           configMap:
             defaultMode: 420
-            name: k6-cm-prod
+            name: k6-cm-dev
       containers:
         - name: k6
           image: grafana/k6:latest
@@ -53,7 +53,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: TEST_ID
-              value: "k6-30k-004"
+              value: "k6-30k-013"
             - name: TARGET_BASE_URL
               value: "https://api.traffictacos.store"
             - name: K6_OUT
@@ -68,11 +68,11 @@ spec:
               value: "10s"
           resources:
             requests:
-              cpu: "4"
-              memory: "8Gi"
+              cpu: "2"
+              memory: "4Gi"
             limits:
-              cpu: "8"
-              memory: "12Gi"
+              cpu: "4"
+              memory: "6Gi"
         - name: aws-sigv4-proxy
           image: public.ecr.aws/aws-observability/aws-sigv4-proxy:latest
           args:
@@ -91,5 +91,5 @@ spec:
               cpu: "100m"
               memory: "20Mi"
             limits:
-              cpu: "1"
-              memory: "1Gi"
+              cpu: "500m"
+              memory: "100Mi"
