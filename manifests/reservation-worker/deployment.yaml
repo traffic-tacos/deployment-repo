@@ -60,7 +60,7 @@ spec:
       
       containers:
       - name: reservation-worker
-        image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-reservation-worker:b685e0a
+        image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-reservation-worker:8f69af3
         imagePullPolicy: Always
         
         ports:
