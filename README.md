@@ -363,7 +363,13 @@ deployment-repo/
 │   │   └── script-rps.js           # RPS 테스트 시나리오
 │   └── manifests/
 │       └── k6.yaml                 # K6 TestRun CRD
-│
+│  
+│── kubecost/                       # kubecost 설정
+│   ├── kubecost-ingress.yaml
+│   ├── kubecost-serviceaccount.yaml
+│   └── kubecost-values.yaml
+    
+│         
 ├── otel-collector/                 # OpenTelemetry 설정
 │   ├── otel-collector-daemonset.yaml
 │   └── otel-collector-statefulset-with-ta.yaml
