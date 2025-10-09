@@ -58,7 +58,7 @@ spec:
       
       containers:
       - name: inventory-api
-        image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-inventory-api:c448e3b
+        image: 137406935518.dkr.ecr.ap-northeast-2.amazonaws.com/traffic-tacos-inventory-api:446ce93
         imagePullPolicy: Always
         
         ports:
