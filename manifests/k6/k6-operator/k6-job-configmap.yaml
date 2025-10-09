@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: k6-cm-dev
+  name: k6-cm-prod
   namespace: load-test
   labels:
     app: k6-operator
@@ -46,7 +46,7 @@ data:
             testid: __ENV.TEST_ID,
             pod: __ENV.POD_NAME
         },
-        systemTags: ['status', 'method', 'scenario', 'expected_response', 'pod', 'vu', "user"],
+        systemTags: ['status', 'method', 'scenario', 'expected_response', 'pod'],
         scenarios: {
             ticket_click_once: {
                 executor: 'per-vu-iterations',  // 각 VU가 1회 실행 후 종료
@@ -92,8 +92,7 @@ data:
                     'Idempotency-Key': uuidv4WithVU(userId),
                 },
                 tags: {
-                    api: '/queue/join',
-                    user: userId
+                    api: '/queue/join'
                 },
                 timeout: '300s'
             }
@@ -124,8 +123,7 @@ data:
                         ...baseHeaders
                     },
                     tags: {
-                        api: '/queue/status',
-                        user: userId
+                        api: '/queue/status'
                     },
                 }
             );
@@ -162,8 +160,7 @@ data:
                     'Idempotency-Key': uuidv4WithVU(userId),
                 },
                 tags: {
-                    api: '/queue/enter',
-                    user: userId
+                    api: '/queue/enter'
                 },
             }
         );
@@ -184,6 +181,7 @@ data:
     export function fullScenario() {
         totalFlows.add(1);
         const userId = `u${POD_NAME.slice(-2)}-${__VU}`;
+
         const queueData = joinQueue(userId);
         if (!queueData) return;
 
