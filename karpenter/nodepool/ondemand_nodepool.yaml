@@ -59,4 +59,3 @@ spec:
   ttlSecondsUntilExpired: 30       
   consolidation:
     enabled: true             
-  weight: 50
