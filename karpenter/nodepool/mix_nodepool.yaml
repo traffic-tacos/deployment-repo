@@ -51,6 +51,4 @@ spec:
       startupTaints:
       - effect: NoSchedule
         key: node.karpenter.sh/initializing
-        value: "true"
-  consolidation:
-    enabled: true             
+        value: "true"             

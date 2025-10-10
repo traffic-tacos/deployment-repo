@@ -1,39 +1,54 @@
-apiVersion: karpenter.sh/v1beta1
+apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
   name: loadtest
+  labels:
+    capacity-preference: spot
+    workload-type: loadtest
 spec:
-  template:
-    metadata:
-      labels:
-        capacity-preference: spot
-        workload-type: loadtest
-    spec:
-      nodeClassRef:
-        name: default-nodeclass
-      requirements:
-        - key: karpenter.sh/capacity-type
-          operator: In
-          values: ["spot"]
-        - key: karpenter.k8s.aws/instance-family
-          operator: In
-          values: ["t3a", "t4g"]    # 비용 효율적인 타입만
-        - key: karpenter.k8s.aws/instance-size
-          operator: In
-          values: ["medium"]    # 비용 최소화  
-      taints:
-        - key: workload
-          value: loadtest
-          effect: NoSchedule
   limits:
     cpu: "8"       # 50 → 8 (최소 테스트 용량)
     memory: 20Gi   # 100Gi → 20Gi
-  template:
-    metadata:
-      labels:
-        workload-type: loadtest  
+  
   disruption:
     budgets:
     - nodes: 100%    # 10% → 100% (테스트 끝나면 즉시 제거)
     consolidateAfter: 10s    # 30s → 10s (테스트 전용이므로 매우 빠르게)
     consolidationPolicy: WhenEmptyOrUnderutilized
+  
+  template:
+    metadata:
+      labels:
+        workload-type: loadtest
+    spec:
+      expireAfter: 720h
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default-nodeclass
+      requirements:
+      - key: karpenter.sh/capacity-type
+        operator: In
+        values: ["spot"]
+      - key: kubernetes.io/arch
+        operator: In
+        values:
+        - amd64
+        - arm64    # t4g (Graviton) 지원
+      - key: kubernetes.io/os
+        operator: In
+        values:
+        - linux
+      - key: karpenter.k8s.aws/instance-family
+        operator: In
+        values:
+        - t3a    # 비용 효율적인 타입
+        - t4g    # ARM64 Graviton
+      - key: karpenter.k8s.aws/instance-size
+        operator: In
+        values:
+        - medium    # 비용 최소화
+      taints:
+      - key: workload
+        value: loadtest
+        effect: NoSchedule
