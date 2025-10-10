@@ -15,22 +15,25 @@ spec:
         - key: karpenter.sh/capacity-type
           operator: In
           values: ["spot"]
-        - key: node.kubernetes.io/instance-type
+        - key: karpenter.k8s.aws/instance-family
           operator: In
-          values: ["t3.large", "t3a.large","t3a.2xlarge"]  
+          values: ["t3a", "t4g"]    # 비용 효율적인 타입만
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["medium"]    # 비용 최소화  
       taints:
         - key: workload
           value: loadtest
           effect: NoSchedule
   limits:
-    cpu: "50"
-    memory: 100Gi
+    cpu: "8"       # 50 → 8 (최소 테스트 용량)
+    memory: 20Gi   # 100Gi → 20Gi
   template:
     metadata:
       labels:
         workload-type: loadtest  
   disruption:
     budgets:
-    - nodes: 10%
-    consolidateAfter: 30s
+    - nodes: 100%    # 10% → 100% (테스트 끝나면 즉시 제거)
+    consolidateAfter: 10s    # 30s → 10s (테스트 전용이므로 매우 빠르게)
     consolidationPolicy: WhenEmptyOrUnderutilized

@@ -9,12 +9,12 @@ metadata:
 spec:
   disruption:
     budgets:
-    - nodes: 20%
-    consolidateAfter: 2m      
-    consolidationPolicy: WhenUnderutilized
+    - nodes: 50%    # 20% → 50% (더 적극적인 scale-down)
+    consolidateAfter: 30s    # 2m → 30s (빠른 비용 절감)
+    consolidationPolicy: WhenEmptyOrUnderutilized    # Empty 노드도 즉시 제거
   limits:
-    cpu: "160"
-    memory: 400Gi
+    cpu: "16"      # 160 → 16 (개발환경 최소화)
+    memory: 40Gi   # 400Gi → 40Gi
   template:
     metadata:
       labels:
@@ -35,6 +35,7 @@ spec:
         operator: In
         values:
         - amd64
+        - arm64    # t4g (Graviton) 지원
       - key: kubernetes.io/os
         operator: In
         values:
@@ -42,14 +43,12 @@ spec:
       - key: karpenter.k8s.aws/instance-family
         operator: In
         values:
-        - t3a
-        - t3
+        - t3a    # t3보다 10% 저렴
+        - t4g    # ARM64 Graviton, 20% 추가 절감
       - key: karpenter.k8s.aws/instance-size
         operator: In
         values:
-        - large     
-        - xlarge   
-        - 2xlarge
+        - medium    # 비용 최소화 (large, xlarge 제거)
       startupTaints:
       - key: node.karpenter.sh/initializing
         value: "true"

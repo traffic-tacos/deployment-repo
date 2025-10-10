@@ -9,12 +9,12 @@ metadata:
 spec:
   disruption:
     budgets:
-    - nodes: 10%
-    consolidateAfter: 1m
+    - nodes: 50%    # 10% → 50% (더 적극적인 scale-down)
+    consolidateAfter: 15s    # 1m → 15s (Spot이므로 더 빠르게)
     consolidationPolicy: WhenEmptyOrUnderutilized
   limits:
-    cpu: "100"
-    memory: 250Gi
+    cpu: "12"      # 100 → 12 (개발환경 최소화)
+    memory: 30Gi   # 250Gi → 30Gi
   template:
     metadata:
       labels:
@@ -29,11 +29,12 @@ spec:
       requirements:
       - key: karpenter.sh/capacity-type
         operator: In
-        values: ["spot","on-demand"]
+        values: ["spot"]    # Spot only (70% 비용 절감)
       - key: kubernetes.io/arch
         operator: In
         values:
         - amd64
+        - arm64    # t4g (Graviton) 지원
       - key: kubernetes.io/os
         operator: In
         values:
@@ -41,14 +42,12 @@ spec:
       - key: karpenter.k8s.aws/instance-family
         operator: In
         values:
-        - t3a
-        - t3
+        - t3a    # t3보다 10% 저렴
+        - t4g    # ARM64 Graviton, 20% 추가 절감
       - key: karpenter.k8s.aws/instance-size
         operator: In
         values:
-        - medium
-        - large
-        - xlarge
+        - medium    # 비용 최소화
       startupTaints:
       - effect: NoSchedule
         key: node.karpenter.sh/initializing
